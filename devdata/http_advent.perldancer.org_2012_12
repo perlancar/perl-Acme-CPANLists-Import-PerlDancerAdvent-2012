@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Pluggable Route Handlers for Dancer 2 | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="pluggable_route_handlers_for_dancer_2"></a>Pluggable Route Handlers for Dancer 2</h1>
+
+<p>With Dancer 2 you can declare route handlers in a new manner so that they can be
+shared among applications easily. It's actually like packaging a route handler
+in its own package. It's called simply <i>Handler</i>, this article will show you
+how it works, how to write your own handlers and how to use them in your app.</p>
+<h2><a name="the_concept"></a>The concept</h2>
+
+<p>The idea is simple: what about a generic route, a route that would make sense in
+many applications, a route that is agnostic of the business logic the app? Plugin
+you say? Indeed, a plugin that contains the route would work, but what about
+something lighter, more "in the core" and configurable?</p>
+<p>That's what a handler is. For instance, in Dancer 2, there are two handlers
+shipped with the core. The first one is responsible for serving pages that match
+an existing template (the <code>auto_page</code> setting) and one is here to serve static
+files.</p>
+<p>Let's see how this work, you'll see how straight forward it is.</p>
+<h2><a name="an_example__the_autopage_handler"></a>An example: the AutoPage handler</h2>
+
+<p>It's easier to describe what a handler is with a real-life example, let's take
+the <code>auto_page</code> feature. You probably know it already, it's a core feature of
+Dancer 1, the idea is simple: if a view exists with a name that matches the
+requested path, Dancer should process the request by processing the template.</p>
+<p>For instance, if I hit <code>/foo</code> and <code>views/foo.tt</code> exists, the response should
+be the same as the one provided by the route:</p>
+<pre class="prettyprint">get '/foo' =&gt; sub {
+    template 'foo'
+};</pre>
+
+<p>That's the <code>auto_page</code> feature, in Dancer 1 it's hard-coded in the core, in
+Dancer 2, it's a <i>handler</i> that is set by default.</p>
+<p>A route handler is a class that consumes the <code>Dancer::Core::Role::Handler</code>
+role. The class must implement a set of methods: <code>methods</code>, <code>regexp</code> and
+<code>code</code> which will be used to declare the route.</p>
+<p>Let's look at <code>Dancer::Handler::AutoPage</code>.</p>
+<p>First, the matching methods are <code>get</code> and <code>head</code>, of course:</p>
+<pre class="prettyprint">sub methods { qw(head get) }</pre>
+
+<p>Then, the regexp or the <i>path</i> we want to match:</p>
+<pre class="prettyprint">sub regexp { '/:page' }</pre>
+
+<p>Anything will be matched by this route, yes because we want a chance to look if
+there's a view named with the value of the <code>page</code> token. If not, the route
+needs to <code>pass</code>, letting the dispatching flow to proceed further.</p>
+<pre class="prettyprint">sub code {
+    sub {
+        my $ctx = shift;
+
+        my $template = $ctx-&gt;app-&gt;config-&gt;{template};
+        if (! defined $template) {
+            $ctx-&gt;response-&gt;has_passed(1);
+            return;
+        }
+
+        my $page = $ctx-&gt;request-&gt;params-&gt;{'page'};
+        my $view_path = $template-&gt;view($page);
+        if (! -f $view_path) {
+            $ctx-&gt;response-&gt;has_passed(1);
+            return;
+        }
+
+        my $ct = $template-&gt;process($page);
+        $ctx-&gt;response-&gt;header('Content-Length', length($ct));
+        return ($ctx-&gt;request-&gt;method eq 'GET') ? $ct : '';
+    };
+}</pre>
+
+<p>As you can see, the <code>code</code> method is passed the <code>Dancer::Core::Context</code> object
+which provides access to anything needed to process the request.</p>
+<p>A <code>register</code> is then implemented to add the route to the registry, and it's
+done, as you can see, register does nothing if the <code>auto_page</code> setting is off.</p>
+<p>So that's even better than in Dancer 1: if the setting is off, the code for
+auto_page does not even exist in the dispatcher tree.</p>
+<pre class="prettyprint">sub register {
+    my ($self, $app) = @_;
+
+    return unless $app-&gt;config-&gt;{auto_page};
+
+    $app-&gt;add_route(
+        method =&gt; $_,
+        regexp =&gt; $self-&gt;regexp,
+        code   =&gt; $self-&gt;code,
+    ) for $self-&gt;methods;
+}</pre>
+
+<p>And <i>voila</i>, we have a route handler.</p>
+<h2><a name="what_about_shipping_your_own"></a>What about shipping your own</h2>
+
+<p>I have the feeling that route handlers could become a new kind of plugins, a
+more advanced way of sharing knowledge between applications, maybe more subtle.
+But you may ask at this point what's the best way to <i>add</i> a random handler
+into your app.</p>
+<p>Well, the config parser will look for a <code>route_handlers</code> section. Any handler
+defined here will be loaded. For instance, the default config for any Dancer 2
+application is as follows:</p>
+<pre class="prettyprint">route_handlers:
+  File:
+    public_dir: /path/to/public
+  AutoPage: 1</pre>
+
+<h2><a name="going_further"></a>Going further</h2>
+
+<p>Route handlers are a very new way to share knowledge between applications. It's
+another way of doing things, no DSL here, everything should be done with the
+internal API of the core. I'm sure we've only scratched the surface here, and
+I'd be very interested to see other things done this way.</p>
+<h2><a name="author"></a>Author</h2>
+
+<p>This article has been written by Alexis Sukrieh for the Perl Dancer Advent
+Calendar 2012.</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

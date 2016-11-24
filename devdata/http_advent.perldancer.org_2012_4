@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Dancer 2, what about using it? Now! | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="dancer_2__what_about_using_it_now_"></a>Dancer 2, what about using it? Now!</h1>
+
+<h2><a name="a_look_back"></a>A look back</h2>
+
+<p>It's been one year and four months since I did my first commit on Dancer 2. The
+first commits, besides setting up a dist.ini file are about the
+<code>Dancer::Core::Route</code> class.</p>
+<p>If you want to refresh your memories about why I decided to embark upon a
+rewrite, you can jump to <a href="http://advent.perldancer.org/2011/8">this article</a> of
+the previous advent calendar.</p>
+<p>Funny to see that when starting this rewrite marathon, I chose to begin with the
+more essential part of the core: the route handler class. It's certainly not a
+random choice, but I'm pretty sure it was not really made on purpose.</p>
+<p>Anyway, almost a year and a half has passed and it's now time to shed some
+light on Dancer 2. I remember Franck Cuny telling me in November 2010 - when we
+were starting the first advent calendar iteration -
+"<i>You'll see, 2011 will be the Dancer year</i>".
+He couldn't have been more right. Many great things happened in 2011 for Dancer.
+So I was asking myself: what about 2012 and the upcoming year, 2013?</p>
+<p>If I should name it, I'd say that 2012 was "<i>the Dancer 2 development year</i>"
+because most of the brainpower was used to grow Dancer 2, to mature it and to
+make it real. Of course Dancer 1 continued to evolve a bit, but at some point we
+froze it, to make sure we'll release 2.</p>
+<p>So what will 2013 be? You already know it right? My bet goes on the "Dancer 2
+year". Everything is ready, Dancer 2 is beautifully designed, efficient and
+extensible yet very compatible with the Dancer 1 ecosystem. You'll love it, and
+you should use it. Now. Here is why, and how.</p>
+<h2><a name="what_is_dancer_2_at_the_time_of_this_writing"></a>What is Dancer 2 at the time of this writing?</h2>
+
+<p>Before we start, let's clarify where we are today, about Dancer 2. Don't look
+for it on CPAN, it's not there quite yet - when we've finished polishing it up
+enough we'll certainly roll a DEVELOPER release but we're not quite yet ready 
+(although we are very close).</p>
+<p>Dancer 2 is a GitHub project, you can browse the code on its page:
+<a href="https://github.com/PerlDancer/Dancer2/">https://github.com/PerlDancer/Dancer2/</a> and you can grab the source like so:</p>
+<pre class="prettyprint">git clone https://github.com/PerlDancer/Dancer2.git</pre>
+
+<p>Although it's not sitting on CPAN, it's a stable source tree, we have more than
+500 unit tests already and I'm able to say that Dancer 2 is also able to run on
+production because, well, that's what I do at work.</p>
+<p>The only area where you should be cautious is with plugins or engines,
+everything is in place to port them, but most of them aren't yet. So it's likely
+that one extension of your app will need to be ported a bit to work with Dancer
+2. It's an easy job to do though, thanks to all the work that has been done on
+Dancer::Plugin to assure inter-operability.  Some of the most commonly-used
+plugins have already been ported, and we are in the process of reaching out to
+plugin authors to help them tweak their plugin to support both Dancer versions
+easily.</p>
+<h2><a name="design_decisions_for_d2"></a>Design decisions for D2</h2>
+
+<h3><a name="pure_oo_code__based_on_moo"></a>Pure OO code, based on Moo</h3>
+
+<p>Before listing all the benefits of using Dancer 2, let's take a look at its
+core, seeing what makes it so different from Dancer 1.</p>
+<p>First, Dancer 2 is written in pure object-oriented code, with
+<a href="https://metacpan.org/module/Moo">Moo</a> as its object system.</p>
+<p>Why Moo? Well, it's Moose philosophy with efficiency in mind, written in pure
+Perl5. It's fast and right to the point. How could another meta-class layer
+fit Dancer's philosophy better?</p>
+<p>Thanks to Moo, and more generally to the Moose approach, Dancer 2's core gets
+very powerful tools in its backbone like laziness construction, role composition
+and method modifiers. That helped a lot to enhance the way things are
+implemented.</p>
+<p>I could almost say that Dancer 1 is written in Perl5 and Dancer 2 is in Moo.</p>
+<h3><a name="no_more_shared_singletons"></a>No more shared singletons</h3>
+
+<p>The most annoying design choice I wanted to get rid of, when
+starting the Dancer rewrite, was the singletons usage. You know the drill,
+globals are evil. That was a mistake I made in the early stage of development
+of Dancer 1, we lived with it, I think pretty well, but Dancer 2 needed to go a
+step further.  Without singletons.</p>
+<p>Without globals, the code is properly decoupled, things know only about themselves
+and their direct neighbours, in fact, the code base now respects truthfully the
+<a href="http://en.wikipedia.org/wiki/Law_of_Demeter">Law of Demeter</a>.</p>
+<p>This will for sure be a lot better for future evolution and code maintenance.</p>
+<h3><a name="strict_app_scoping"></a>Strict app scoping</h3>
+
+<p>Another major change I wanted with Dancer 2, which I couldn't do in 1 because of
+the globals limitation mentioned above, was the per-app encapsulation.</p>
+<p>I wanted that anything I did in a package was scoped there, for instance being
+able to set a serializer in <code>MyApp::API</code> without setting one <code>MyApp::Blog</code>. In
+Dancer 1 that's impossible, because the settings registry is global to the
+process (remember? <i>Globals are evil</i>).</p>
+<p>With Dancer 2, any package that <code>use</code>s Dancer will be scoped into its own
+Dancer::Core::App instance, where the settings registry will live, and the
+route handlers, and anything you could imagine to do within a Dancer package.</p>
+<p>In Dancer 2, you can consider each of your packages in your application as a
+jail where everything is nicely isolated from the outside. No more apps
+collision, no more settings leaks from a part of the application to the other.</p>
+<h2><a name="where_are_we_with_dancer_2"></a>Where are we with Dancer 2?</h2>
+
+<p>First of all, let's make it clear: the whole DSL is supported. It means that
+whatever you do when you use Dancer, you can do it with Dancer 2. It's the same
+syntax, you won't even notice it.</p>
+<p>Because of the major design changes explained above, plugins cannot work
+magically with Dancer 2. The change to apply are minimal for most plugins, but 
+still, a plugin needs to be adapted slightly. Dancer::Plugin provides everything
+to make sure a plugin can run smoothly with Dancer 1 or 2, transparently.</p>
+<p>At the time of this writing, most of the plugins in the ecosystem should be easy
+to port, all we need is volunteers to help us test them, port the code and
+submit pull requests to plugin authors.</p>
+<p>On the core side, we have one thing to do to make the whole ecosystem ready for
+Dancer 2: allowing the same kind of transition for engines (template, session,
+etc). In Dancer 1, an engine just needs to "extends" a base "abstract" class. In
+Dancer 2, as we're running with Moo, this has been changed to roles
+composition.</p>
+<p>Finally, the documentation needs a lot of work to get it up to the expected
+standard.</p>
+<h2><a name="should_you_switch_from_d1_to_d2__and_how"></a>Should you switch from D1 to D2, and how?</h2>
+
+<p>It depends on what you want to do. If your application can be written with a
+pure Dancer distribution, without plugins or engines, then yes, you definitely
+can switch today.</p>
+<p>If you're using plugins in your app, your help is welcome: test your
+application, report any plugin you're using that doesn't work and help us port
+them.</p>
+<p>To power your app with Dancer 2, as it's not released yet, here is what I
+suggest:</p>
+<p>In your application, create a git submodule in vendor/Dancer 2:</p>
+<pre class="prettyprint">$ cd MyProject
+$ git submodule add https://github.com/PerlDancer/Dancer2.git vendor/Dancer2</pre>
+
+<p>Then add this little snippet in your bin/app.pl to make sure you load any lib
+from your vendor directory:</p>
+<pre class="prettyprint">BEGIN {
+    use FindBin;
+
+    while ( my $libdir = glob("${FindBin::Bin}/../vendor/*/lib") ) {
+        unshift @INC, $libdir;
+    }
+}
+
+use Dancer 2.0;</pre>
+
+<p>This way, when the app worker will start, it will push all <code>lib</code> directory it
+an find in <code>./vendor/*</code> as possible location for modules. Hence Dancer 2 will
+be found there.</p>
+<p>Works like a charm, and can be used as well for plugins you want to patch for
+Dancer 2.</p>
+<p>Also, if you want to make sure your Dancer 2 copy in vendor is up to date:</p>
+<pre class="prettyprint">$ git submodule update</pre>
+
+<p>I'm using this technique at work for a Dancer 2 app we've deployed to
+production, it's working great.</p>
+<p>Oh, and the page you're reading now has been served by Dancer 2 as well!</p>
+<p>And while we're at it, see <a href="https://github.com/PerlDancer/Dancer-Plugin-Feed/commit/1399073ebc192c02c8eddfc83ebf6fc07675191b">this commit</a>
+to see how simple it was to port Dancer::Plugin::Feed (which is used by the 
+Advent Calendar app) to support Dancer 2.</p>
+<p>If the plugin you're using is just playing with the DSL, porting it to Dancer 2
+is as easy as using <code>plugin_args</code> in registered subs to unroll <code>@_</code> and as
+declaring the supported versions of Dancer when calling <code>plugin_register</code>.</p>
+<h2><a name="will_you_dance_a_second_time"></a>Will you dance a second time?</h2>
+
+<p>So, will you give it a try? I'm sure you have that little app somewhere that
+would love to make the jump!</p>
+<p>And if you happen to use a plugin which complains about not being compatible
+with Dancer 2, fork it, vendorize it and patch it. And then, submit a pull
+request to the author.</p>
+<p>That's the way you can help!</p>
+<h2><a name="author"></a>Author</h2>
+
+<p>This article has been written by <a href="http://twitter.com/sukria">Alexis Sukrieh</a> 
+for the Perl Dancer Advent Calendar 2012.</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Another year of Dancing... | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="another_year_of_dancing___"></a>Another year of Dancing...</h1>
+
+<p>Welcome to the Dancer advent calendar, for the third year running!  Previous
+year's calendars have been well received, let's hope this one can live up to
+them.</p>
+<h2><a name="more_and_more_dancers___"></a>More and more dancers...</h2>
+
+<p>More and more people are using Dancer to power their sites - recent additions to
+the <a href="http://dancer.pm/dancefloor">dancefloor</a> include
+<a href="http://www.crowdtilt.com/">CrowdTilt</a>,
+<a href="http://www.daystack.com/">Daystack</a>,
+<a href="http://elibraryusa.state.gov/">eLibraryUSA</a> (US Department of State),
+<a href="http://www.maxi-tip.cz/">Maxi Tip</a>,
+<a href="http://fbsdmon.org">FreeBSD Monitor</a>,
+<a href="http://danceb.in/">Dancebin</a>,
+<a href="http://theanarchistlibrary.org/">The Anarchist Library</a> and others.  (Using
+Dancer, and happy to have your site featured?  Let us know!)</p>
+<h2><a name="dancer2___almost_"></a>Dancer2 - almost!</h2>
+
+<p>Dancer2 has been coming along well, and is already being used in production.
+We're at the point now it needs polish, documentation improvements and some
+migration guides, and it can hit CPAN!  Dancer2 is a complete rewrite of
+Dancer's core, using much better designs, for better maintainability and
+extendability, whilst maintaining backwards compatibility with Dancer1's API -
+so migrating to Dancer 2 should be quite straightforward.</p>
+<p>Expect further articles in the upcoming days with plenty more information on
+Dancer 2!</p>
+<h2><a name="new_features_in_dancer"></a>New features in Dancer</h2>
+
+<p>Most of our development effort has been going towards Dancer 2, Dancer 1 however
+has had many minor improvements and bugfixes, but a few more notable
+changes culled from the changelog:</p>
+<ul>
+<li><a name="item_Wallflower_now_shipped_separately"></a><b>Wallflower now shipped separately</b>
+<p>BooK's 'wallflower' tool for generating static websites has been removed from
+the Dancer distribution, and is now distributed separately as a more
+general-purpose tool under the name <a href="https://metacpan.org/module/App::Wallflower">App::Wallflower</a>.</p>
+</li>
+<li><a name="item_dancer_response_can_take_HTTP__Headers"></a><b>dancer_response can take HTTP::Headers</b>
+<p>You can now pass a <a href="https://metacpan.org/module/HTTP::Headers">HTTP::Headers</a> object to <code>dancer_response</code></p>
+</li>
+<li><a name="item_Dancer2_compatibility_features_in_Dancer__Plugin"></a><b>Dancer2 compatibility features in Dancer::Plugin</b>
+<p>Some new keywords are added to Dancer::Plugin to make writing plugins which can
+work on both Dancer and Dancer 2 a little easier.  (There are a few minor
+differences in how plugins work in Dancer 2; expect an upcoming post on how to
+make a plugin compatible with both versions.  Some of the more popular Dancer
+plugins have already been updated in readyness.)</p>
+</li>
+<li><a name="item_new_test_function_response_redirect_location_is"></a><b>new test function response_redirect_location_is</b>
+<p>Dancer::Test now provides a <code>response_redirect_location_is</code>, which does as the
+name would suggest - tests that the response to a request is a redirect to the
+expected location.</p>
+</li>
+</ul>
+<h2><a name="new_dancer_plugins"></a>New Dancer plugins</h2>
+
+<p>The Dancer plugin ecosystem continues to grow, with several new Dancer plugins
+appearing in 2012:</p>
+<ul>
+<li><a name="item__a_href__https___metacpan_org_module_Dancer__Plugin__Auth__Extensible__Dancer__Plugin__Auth__Extensible__a_"></a><b><a href="https://metacpan.org/module/Dancer::Plugin::Auth::Extensible">Dancer::Plugin::Auth::Extensible</a></b>
+<p>User authentication and authorisation is a common requirement; we had the old
+RBAC plugin, but it was in need of some serious work to make it pleasant to use.
+In the end, I decided to rock up a new authentication framework plugin for
+Dancer, designed to be simple and easy to use, and also easy to extend to
+support various authentication sources.  A full article on this will appear in
+the upcoming days.</p>
+</li>
+<li><a name="item__a_href__https___metacpan_org_module_Dancer__Plugin__DictionaryCheck__Dancer__Plugin__DictionaryCheck__a_"></a><b><a href="https://metacpan.org/module/Dancer::Plugin::DictionaryCheck">Dancer::Plugin::DictionaryCheck</a></b>
+<p>A new plugin appearing just before this post went up, it's designed to make it
+easy to check a password to see if it is a dictionary word, to help stop users
+supplying insecure passwords.</p>
+</li>
+<li><a name="item__a_href__https___metacpan_org_module_Dancer__Plugin__CDN__Dancer__Plugin__CDN__a_"></a><b><a href="https://metacpan.org/module/Dancer::Plugin::CDN">Dancer::Plugin::CDN</a></b>
+<p>Provides URLs for static files including a content hash so that the URLs will
+change when the content changes, to deal with caching.  Uses <a href="https://metacpan.org/module/HTTP::CDN">HTTP::CDN</a> which
+can be configured to perform automatic minification/compiling of CSS/JS/LESS.</p>
+</li>
+<li><a name="item__a_href__https___metacpan_org_module_Dancer__Plugin__Res__Dancer__Plugin__Res__a_"></a><b><a href="https://metacpan.org/module/Dancer::Plugin::Res">Dancer::Plugin::Res</a></b>
+<p>Provides syntactic sugar to easily set the response status and return a response
+in one go, rather than two steps.</p>
+</li>
+<li><a name="item__a_href__https___metacpan_org_module_Dancer__Plugin__I18N__Dancer__Plugin__I18N__a_"></a><b><a href="https://metacpan.org/module/Dancer::Plugin::I18N">Dancer::Plugin::I18N</a></b>
+<p>Provides internationalisation support for your Dancer apps, using
+<a href="https://metacpan.org/module/Locale::Maketext::Simple">Locale::Maketext::Simple</a>.</p>
+</li>
+<li><a name="item__a_href__https___metacpan_org_module_Dancer__Plugin__EmptyGIF__Dancer__Plugin__EmptyGIF__a_"></a><b><a href="https://metacpan.org/module/Dancer::Plugin::EmptyGIF">Dancer::Plugin::EmptyGIF</a></b>
+<p>Allows you to easily respond with an empty GIF image, with the headers set
+appropriately.  This is useful for tracking purposes, if you want to embed an
+<code>IMG</code> tag in your HTML to call a route with certain params; in the route, you
+can then do whatever logging/other actions you need, then simply return an empty
+GIF to the browser.</p>
+</li>
+</ul>
+<h2><a name="dancer_at_lpw2012"></a>Dancer at LPW2012</h2>
+
+<p>Andrew Solomon ran a free two-hour training course at this year's London Perl 
+Workshop - 13 people were registered to attend, but I haven't yet heard how many
+did attend.  Andrew's course was a hands-on training session to develop a website
+with dynamic content using Dancer, during which the attendees would:</p>
+<ul>
+<li><a name="item_learn_to_use_the_Dancer_framework"></a><b>learn to use the Dancer framework</b>
+</li>
+<li><a name="item_learn_to_use_Template_Toolkit"></a><b>learn to use Template Toolkit</b>
+</li>
+<li><a name="item_understand_the_concept_of_Model_View_Controller"></a><b>understand the concept of Model-View-Controller</b>
+</li>
+<li><a name="item_experience_structuring_code_for_maintainability"></a><b>experience structuring code for maintainability</b>
+</li>
+<li><a name="item_experience_using_object_oriented_Perl_modules"></a><b>experience using object oriented Perl modules</b>
+</li>
+</ul>
+<h2><a name="dancer_powered_documentation"></a>Dancer-powered documentation</h2>
+
+<p>James Aitken (LoonyPandora) gave a talk at LPW 2012 on 
+<a href="https://speakerdeck.com/loonypandora/documentation-for-fun-and-profit">Documentation For Fun and Profit</a>
+highlighting why good high-level documentation is important, and what you can do to make
+it even more useful.  He gave a sneak peak of the REST API documentation and
+test console we use at UK2 - more details on this should be coming in a future
+post.</p>
+<h2><a name="dancer_irc_channel_community_grows"></a>Dancer IRC channel community grows</h2>
+
+<p>The community of helpful users on the Dancer IRC channel continues to grow!  You
+can find us on <code>irc.perl.org</code> in <code>#dancer</code> - or <a href="irc://irc.perl.org/dancer">irc://irc.perl.org/dancer</a>
+if your system is configured to support <code>irc://</code> links.</p>
+<p>If you do not regularly use IRC but wish to join us, there is also a web IRC
+client available at <a href="http://dancer.pm/irc">http://dancer.pm/irc</a> for ease of use.</p>
+<p>At the time of writing, there are 98 people present in <code>#dancer</code>!</p>
+<h2><a name="dancer_repository_move"></a>Dancer repository move</h2>
+
+<p>Dancer's GitHub repository has been moved to the PerlDancer organisation on
+GitHub, to make sharing management of the repository and distributing commit
+bits where needed far easier - the repository is now found at:</p>
+<p><a href="https://github.com/PerlDancer/Dancer">https://github.com/PerlDancer/Dancer</a></p>
+<h2><a name="dancer_mailing_list_move"></a>Dancer mailing list move</h2>
+
+<p>Some users were finding that their posts didn't always reach the old mailing
+list.  The list has been moved to a new list server, with a new list posting
+address: <a href="mailto:dancer-users@dancer.pm">dancer-users@dancer.pm</a>.  The old
+address redirects to the new list.</p>
+<h2><a name="conclusion"></a>Conclusion</h2>
+
+<p>Well, this was a hastily-put-together look back at 2012; the following days will
+have various articles regarding Dancer which I hope will be of interest.  Not
+all days are filled yet, so if you wish to write a post for the advent calendar,
+please contact me - all assistance would be greatly appreciated!</p>
+<h2><a name="author"></a>AUTHOR</h2>
+
+<p>David Precious (BIGPRESH)</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

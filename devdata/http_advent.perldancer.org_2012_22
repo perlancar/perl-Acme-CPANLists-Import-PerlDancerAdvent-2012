@@ -1,0 +1,549 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Tutorial: Shrinkr, an URL shortener | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="tutorial__shrinkr__an_url_shortener"></a>Tutorial: Shrinkr, an URL shortener</h1>
+
+<p>This article will guide you through the writing of working URL shortener
+written with Dancer.</p>
+<h2><a name="required_perl_modules"></a>Required Perl modules</h2>
+
+<p>In addition to Dancer, you'll also need <a href="https://metacpan.org/module/Template">Template</a>, <a href="https://metacpan.org/module/DBD::SQLite">DBD::SQLite</a>,
+<a href="https://metacpan.org/module/Math::Base36">Math::Base36</a>, <a href="https://metacpan.org/module/File::Slurp">File::Slurp</a>.  You can install these using your CPAN client.</p>
+<pre class="prettyprint">cpan Dancer Template DBD::SQLite Math::Base36 File::Slurp</pre>
+
+<p>Because I'm using a regular expression named capture (one of my favourite Python
+regex features) in this demo, you <b>must</b> use Perl 5.10 or later to run this
+example.</p>
+<p>I've tested the application on Windows 7, Fedora 13 Linux, and Mac OS 10.6,
+so it should work "out of the box" for you. If not, patches are welcome!</p>
+<h2><a name="setting_defaults_and_configuration"></a>Setting defaults and configuration</h2>
+
+<pre class="prettyprint">set 'database' =&gt; File::Spec-&gt;tmpdir() . '/shrinkr.db';
+set 'template' =&gt; 'template_toolkit';
+set 'logger' =&gt; 'console';
+set 'log' =&gt; 'debug';
+set 'show_errors' =&gt; 1;
+
+layout 'main';
+
+before_template sub {
+  my $tokens = shift;
+
+  $tokens-&gt;{'base'} = request-&gt;base();
+  $tokens-&gt;{'css_url'} = 'css/style.css';
+};</pre>
+
+<p>For this tutorial, I've decided to put all of the configuration settings
+into the main application file.  For a more complex application it would
+be a better idea to use a separate YAML file to hold the configuration
+directives.  (This technique is well documented in the primary Dancer docs.)</p>
+<p>The first line is not specific to Dancer, only to this application. It
+specifies the location of the SQLite database and mainly serves to point out
+that you can add your own arbitrary settings on top of the ones which Dancer
+already has defined.</p>
+<p>The second line tells Dancer to use <a href="https://metacpan.org/module/Template">Template Toolkit</a> as its
+template engine because the default Dancer template engine is a bit too
+simple for most applications.  There are several other Dancer template
+engines if you prefer a different one.</p>
+<p>The third line tells Dancer to use the console for log output (instead of a
+file).  We want the logger to output at the 'debug' level or higher, so that's
+the fourth line.</p>
+<p>In the last setting line, we tell Dancer to output errors directly to the 
+web client. This is a fantastic option for development as it gives you 
+a great stack trace and loads of context around the error, but its probably 
+not a great option for production sites.</p>
+<p>There is also a <code>layout</code> directive which tells Dancer to look in 
+<code>views/layouts</code> for a file named <i>main.tt</i>.  Once the template engine
+renders the specified layout template, it will insert a specific view into
+a tag named &lt;% content %&gt;.  This helps give your application a very
+consistent look and feel across all of the views in it.</p>
+<p>We also specify the default values for every template using the 
+<code>before_template</code> directive which sets a value for a <code>base</code> value
+and the <code>css_url</code>.</p>
+<p>Note that the web-viewable location is <code>css/style.css</code> but the file location
+is <i>public/css/style.css</i> - make sure you omit the <i>public</i> part of the 
+file path when you're constructing your templates or static page route
+handlers.</p>
+<h2><a name="database_set_up"></a>Database set up</h2>
+
+<pre class="prettyprint">create table if not exists link (
+  id integer primary key,
+  code string not null,
+  url string not null,
+  count integer not null
+);</pre>
+
+<p>This is the schema for our database.  We have an <code>id</code> field, a <code>code</code> field,
+a <code>url</code> field, and a <code>count</code> field.  If this were a more sophisticated 
+application the <code>count</code> field might be a part of an <code>analytics</code> table, but
+we're all about keeping things simple, so it's just tacked on to our simple
+table design here.</p>
+<p>Inside the application, the database routines are straightforward.</p>
+<pre class="prettyprint">sub connect_db {
+  my $dbh = DBI-&gt;connect("dbi:SQLite:dbname=".setting('database')) or
+    die $DBI::errstr;
+
+  return $dbh;
+}</pre>
+
+<p>Here we define a routine to establish a connection to our database instance.
+Notice how the <code>database</code> setting is consumed here.</p>
+<pre class="prettyprint">my $id = 0;
+sub init_db {
+  my $db = connect_db();
+
+  my $sql = read_file("./schema.sql");
+  $db-&gt;do($sql) or die $db-&gt;errstr;
+
+  $sql = "SELECT MAX(id) FROM link";
+  my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+  $sth-&gt;execute() or die $sth-&gt;errstr;
+  ($id) = $sth-&gt;fetchrow_array() or die $sth-&gt;errstr;
+
+}</pre>
+
+<p>We define a global variable called <code>$id</code> and then execute our initial 
+table set up and initialise the <code>$id</code> variable as the largest ID value
+from the database.</p>
+<pre class="prettyprint">sub get_next_id {
+  return ++$id;
+}</pre>
+
+<p>Here we set up a routine to return a new ID value when a prospective URL
+is entered by a user.  This is simple enough that it could be an inline
+function but we could enhance this function later with additional error
+checking or an alternate id generation scheme.</p>
+<h2><a name="the_____route_handler"></a>The '/' route handler</h2>
+
+<p>Let's unpack the root URL (/) route handler line by line.</p>
+<pre class="prettyprint">any ['get', 'post'] =&gt; '/' =&gt; sub {</pre>
+
+<p>We tell Dancer that this route handler works with both GET and POST requests. 
+Next we specify the '/' URL to match and finally, begin an anonymous subroutine
+to do something when the first two conditions are met.</p>
+<pre class="prettyprint">my $msg;
+my $err;
+
+if ( request-&gt;method() eq "POST" ) {</pre>
+
+<p>Here we're going to process POST requests - these requests will be the 
+user input from the form in the <code>template</code> directive below.</p>
+<pre class="prettyprint">my $uri = URI-&gt;new( params-&gt;{'url'} );
+
+if ( $uri-&gt;scheme !~ /https?/ ) {
+    $err = 'Error: Only HTTP or HTTPS URLs are accepted.';
+}</pre>
+
+<p>We check the supplied URL to make sure it's something we want to add to the
+database - if the user inputs something like <code>ssh://example.com</code> we want
+to reject that input with a message explaining what we're looking for.</p>
+<pre class="prettyprint">else {
+
+    my $nid = get_next_id();
+    my $code = encode_base36($nid);
+
+    my $sql = 'INSERT INTO link (id, code, url, count) VALUES (?, ?, ?, 0)';
+    my $db = connect_db();
+    my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+    $sth-&gt;execute( $nid, $code, $uri-&gt;canonical() ) or die $sth-&gt;errstr;</pre>
+
+<p>Hopefully this is all standard <a href="https://metacpan.org/module/DBI">DBI</a> programming for you. Nothing tremendously
+mysterious going on here.</p>
+<pre class="prettyprint">$msg = $uri-&gt;as_string . " has been shrunk to " . 
+    request-&gt;base() . $code;</pre>
+
+<p>We want to send a message to our user telling her that the URL she supplied
+has been added to the database with whatever code was next in our ID 
+assignment scheme.</p>
+<pre class="prettyprint">   } 
+}
+
+template 'add.tt', {
+    'err' =&gt; $err,
+    'msg' =&gt; $msg,
+};</pre>
+
+<p>Here we use the <code>template</code> directive to render the <i>add.tt</i> view 
+supplying the <code>err</code> and <code>msg</code> values as appropriate.  If we fell through
+from our <code>if</code> statement above, both values are blank (which is fine because
+the <i>add.tt</i> template tests to see if <code>err</code> or <code>msg</code> have values 
+before they're rendered.)</p>
+<pre class="prettyprint">};</pre>
+
+<p>Note the semicolon after the closing curly brace. This is required because
+the subroutine above is actually a coderef.</p>
+<h2><a name="processing_a_shortened_url"></a>Processing a shortened URL</h2>
+
+<p>Next we're going to write a route handler to do something when a user
+tries to use a shortened URL code.</p>
+<pre class="prettyprint">get qr|\A\/(?&lt;code&gt;[A-Za-z0-9]+)\Z| =&gt; sub {</pre>
+
+<p>Like all Dancer handlers, we start by stating which HTTP verb we want to
+handle, a GET in this case.  Next we define a regular expression the GET
+request must match.</p>
+<p>This regular expression specifies a route that starts with a '/' and is
+followed by one or more of the following characters 0-9, a-z, or A-Z. Notice
+the <code>?&lt;code&gt;</code> construction?  This is the syntax for creating a 
+named regular expression match in Perl 5.10 (or later) - instead of using the
+positional variables like <code>$1</code> and the like, we can directly specify a
+name for the match we want to save.</p>
+<pre class="prettyprint">my $decode = decode_base36(uc captures-&gt;{'code'});</pre>
+
+<p>In this example, the match (if any) is stored in a special hash 
+(<code>%+</code> generally, or the <code>captures</code> directive in Dancer) with a 
+key of <code>code</code>. We make sure to upper case the code value because
+<a href="https://metacpan.org/module/Math::Base36">Math::Base36</a> uses only uppercase letters.</p>
+<pre class="prettyprint">if ( $decode &gt; $id ) {
+    send_error(404);
+}</pre>
+
+<p>If the decoded value is greater than the current id value, we know it
+won't exist in the database, so we send the user a 404 error instead of
+trying to process the request any further.</p>
+<pre class="prettyprint">my $db = connect_db();
+my $sql = 'SELECT url, count FROM link WHERE id = ?';
+my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+$sth-&gt;execute($decode) or die $sth-&gt;errstr;
+
+my ($url, $count) = $sth-&gt;fetchrow_array() or die $sth-&gt;errstr;
+
+$sql = 'UPDATE link SET count = ? WHERE id = ?';
+$sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+$sth-&gt;execute(++$count, $decode);</pre>
+
+<p>More DBI programming, now. We update the database entry by incrementing the
+<code>count</code> counter for this request.</p>
+<pre class="prettyprint">   redirect $url;
+};</pre>
+
+<p>Finally, we tell Dancer to redirect the user to the specified URL and 
+close the handler.</p>
+<h2><a name="link_stats"></a>Link stats</h2>
+
+<p>Since we're collecting the number of visits to specific links, we need
+to display those to a user somehow.  Let's look at the handler for that.</p>
+<pre class="prettyprint">get '/:code/stats' =&gt; sub {</pre>
+
+<p>Another GET request, this time going to a special Dancer construction <code>:code</code>
+which will match anything preceded by '/' and followed by a '/stats' pattern.  
+This is a much less restrictive regular expression than the one above, 
+but I wanted to show a different way to do the same thing - although to 
+be truly defensive here, much better parameter validation would be required 
+on the <code>:code</code> input.</p>
+<pre class="prettyprint">my $decode = decode_base36(uc params-&gt;{'code'});
+
+if ( $decode &gt; $id ) {
+    send_error(404);
+}</pre>
+
+<p>This is the same code block as above, except this time the <code>:code</code> capture
+is stored inside of the the <code>params</code> Dancer construction, rather than the
+<code>captures</code> routine.</p>
+<pre class="prettyprint">my $sql = 'SELECT id, code, url, count FROM link WHERE id = ?';
+my $db = connect_db();
+my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+$sth-&gt;execute($decode) or die $sth-&gt;errstr;</pre>
+
+<p>This section retrieves the appropriate information from our database.</p>
+<pre class="prettyprint">my $prevl;
+my $nextl;
+
+unless ( ( $decode - 1 ) &lt; 0 ) {
+    $prevl = encode_base36( $decode - 1 );
+}
+
+unless ( ( $decode + 1 ) &gt; $id ) {
+    $nextl = encode_base36( $decode + 1 );
+}</pre>
+
+<p>I wanted to put some navigation links in the statistical display so a user
+could move around in them.  This code section generates the appropriate
+bounded links to do that.</p>
+<pre class="prettyprint">   template 'stats.tt', {
+       'stats' =&gt; $sth-&gt;fetchall_hashref('id'),
+       'nextl' =&gt; $nextl,
+       'prevl' =&gt; $prevl,
+   };
+};</pre>
+
+<p>And here we call the <code>template</code> method, and hand off the database query
+results, and the navigation links as appropriate.  The <i>stats.tt</i> template
+will check to see if <code>nextl</code> or <code>prevl</code> have values before rendering them
+so it's OK to pass in a value which isn't defined.</p>
+<h2><a name="showing_all_link_stats"></a>Showing all link stats</h2>
+
+<p>I also wanted a way to show a user all of the links stored in the database,
+so this handler does that.</p>
+<pre class="prettyprint">get '/all_stats' =&gt; sub {
+
+   my $sql = 'SELECT id, code, url, count FROM link';
+   my $db = connect_db();
+   my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+   $sth-&gt;execute() or die $sth-&gt;errstr;
+
+   template 'stats.tt', {
+       'stats' =&gt; $sth-&gt;fetchall_hashref('id'),
+   };
+
+};</pre>
+
+<p>This handler is even simpler than the one above it but it does basically the
+same thing.  Notice I'm using the same template to display the data, the 
+main differences being that in the single link case, there's navigation
+links and there aren't any such links here.</p>
+<h2><a name="putting_it_all_together"></a>Putting it all together</h2>
+
+<p>Here's the entire script from start to finish.</p>
+<pre class="prettyprint">use 5.010_000;
+use Dancer;
+use Template;
+use DBI;
+use Math::Base36 ':all';
+use File::Spec;
+use File::Slurp;
+use URI;
+ 
+set 'database' =&gt; File::Spec-&gt;tmpdir() . '/shrinkr.db';
+set 'template' =&gt; 'template_toolkit';
+set 'logger' =&gt; 'console';
+set 'log' =&gt; 'debug';
+set 'show_errors' =&gt; 1;
+ 
+layout 'main';
+ 
+before_template sub {
+    my $tokens = shift;
+ 
+    $tokens-&gt;{'base'} = request-&gt;base();
+    $tokens-&gt;{'css_url'} = 'css/style.css';
+};
+ 
+sub connect_db {
+       my $dbh = DBI-&gt;connect("dbi:SQLite:dbname=".setting('database')) or
+               die $DBI::errstr;
+ 
+       return $dbh;
+}
+ 
+my $id = 0;
+sub init_db {
+    my $db = connect_db();
+ 
+    my $sql = read_file("./schema.sql");
+    $db-&gt;do($sql) or die $db-&gt;errstr;
+ 
+    $sql = "SELECT MAX(id) FROM link";
+    my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+    $sth-&gt;execute() or die $sth-&gt;errstr;
+    ($id) = $sth-&gt;fetchrow_array() or die $sth-&gt;errstr;
+ 
+}
+ 
+sub get_next_id {
+    return ++$id;
+}
+ 
+any ['get', 'post'] =&gt; '/' =&gt; sub {
+ 
+    my $msg;
+    my $err;
+ 
+    if ( request-&gt;method() eq "POST" ) {
+        my $uri = URI-&gt;new( params-&gt;{'url'} );
+ 
+        if ( $uri-&gt;scheme !~ 'http' ) {
+            $err = 'Error: Only HTTP or HTTPS URLs are accepted.';
+        }
+        else {
+ 
+            my $nid = get_next_id();
+            my $code = encode_base36($nid);
+ 
+            my $sql = 'INSERT INTO link (id, code, url, count) VALUES (?, ?, ?, 0)';
+            my $db = connect_db();
+            my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+            $sth-&gt;execute( $nid, $code, $uri-&gt;canonical() ) or die $sth-&gt;errstr;
+         
+            $msg = $uri-&gt;as_string . " has been shrunk to " . 
+                request-&gt;base() . $code;
+       } 
+    }
+ 
+    template 'add.tt', {
+        'err' =&gt; $err,
+        'msg' =&gt; $msg,
+    };
+ 
+};
+ 
+get qr|\A\/(?&lt;code&gt;[A-Za-z0-9]+)\Z| =&gt; sub {
+ 
+    my $decode = decode_base36(uc captures-&gt;{'code'});
+ 
+    if ( $decode &gt; $id ) {
+        send_error(404);
+    }
+ 
+    my $db = connect_db();
+    my $sql = 'SELECT url, count FROM link WHERE id = ?';
+    my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+    $sth-&gt;execute($decode) or die $sth-&gt;errstr;
+ 
+    my ($url, $count) = $sth-&gt;fetchrow_array() or die $sth-&gt;errstr;
+ 
+    $sql = 'UPDATE link SET count = ? WHERE id = ?';
+    $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+    $sth-&gt;execute(++$count, $decode);
+ 
+    redirect $url;
+};
+ 
+get '/:code/stats' =&gt; sub {
+ 
+    my $decode = decode_base36(uc params-&gt;{'code'});
+ 
+    if ( $decode &gt; $id ) {
+        send_error(404);
+    }
+ 
+    my $sql = 'SELECT id, code, url, count FROM link WHERE id = ?';
+    my $db = connect_db();
+    my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+    $sth-&gt;execute($decode) or die $sth-&gt;errstr;
+ 
+    my $prevl;
+    my $nextl;
+ 
+    unless ( ( $decode - 1 ) &lt; 0 ) {
+        $prevl = encode_base36( $decode - 1 );
+    }
+ 
+    unless ( ( $decode + 1 ) &gt; $id ) {
+        $nextl = encode_base36( $decode + 1 );
+    }
+ 
+    template 'stats.tt', {
+        'stats' =&gt; $sth-&gt;fetchall_hashref('id'),
+        'nextl' =&gt; $nextl,
+        'prevl' =&gt; $prevl,
+    };
+};
+ 
+get '/all_stats' =&gt; sub {
+ 
+    my $sql = 'SELECT id, code, url, count FROM link';
+    my $db = connect_db();
+    my $sth = $db-&gt;prepare($sql) or die $db-&gt;errstr;
+    $sth-&gt;execute() or die $sth-&gt;errstr;
+ 
+    template 'stats.tt', {
+        'stats' =&gt; $sth-&gt;fetchall_hashref('id'),
+    };
+ 
+};
+ 
+init_db();
+start;</pre>
+
+<h2><a name="author"></a>Author</h2>
+
+<p>This article has been written by Mark R. Allen for the Perl Dancer Advent
+Calendar.</p>
+<h2><a name="copyright"></a>Copyright</h2>
+
+<p>Copyright (C) 2010 by Mark R. Allen.</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

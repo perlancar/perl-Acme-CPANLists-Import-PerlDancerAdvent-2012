@@ -1,0 +1,236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Dancer deployment: Apache's mod_proxy and Nginx | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="dancer_deployment__apache_s_mod_proxy_and_nginx"></a>Dancer deployment: Apache's mod_proxy and Nginx</h1>
+
+<h2><a name="notice"></a>Notice</h2>
+
+<p>I'm not a networking guru. What follows is what I think I've learn
+asking in <code>#plack</code> and <code>#dancer</code> (<a href="irc://irc.perl.org">irc://irc.perl.org</a>, thanks people, you really
+rock) and reading the documentation on the net. I apologize in advance
+if something is not 100% correct.</p>
+<h2><a name="scenario"></a>Scenario</h2>
+
+<p>So, you used the <a href="https://metacpan.org/module/Dancer">Dancer</a> framework to build your new shiny web
+application. Now it's time to deploy it. You have a server with a very
+common setup: Apache2 with mod_php, which serves other sites. You read
+<a href="https://metacpan.org/module/Dancer::Deployment">Dancer::Deployment</a> and think: OK, no problem, just use Apache's
+mod_proxy and <a href="https://metacpan.org/module/Starman">Starman</a> and you will be fine.</p>
+<p>Wrong! You're not fine. You're indeed in big troubles.</p>
+<h2><a name="the_problems__first_part_"></a>The problems (first part)</h2>
+
+<p>First, mod_proxy and Starman seem not to play well together: from the <a href="https://metacpan.org/module/starman">starman</a>'s documentation:</p>
+<blockquote>
+<p>--disable-keepalive</p>
+<p>Disable Keep-alive persistent connections. It is an useful
+workaround if you run Starman behind a broken frontend proxy that
+tries to pool connections more than a number of backend workers
+(i.e. Apache mpm_prefork + mod_proxy).</p>
+</blockquote>
+<p>From Apache's
+<a href="http://httpd.apache.org/docs/2.2/mod/mod_proxy.html#envsettings">documentation</a>:</p>
+<blockquote>
+<p>For circumstances where mod_proxy is sending requests to an origin
+server that doesn't properly implement keepalives or HTTP/1.1, there
+are two environment variables that can force the request to use
+HTTP/1.0 with no keepalive.</p>
+</blockquote>
+<p>Ok, no problem, there are the workarounds, but it doesn't look like a
+promising setup.</p>
+<h2><a name="the_problems__second_part_"></a>The problems (second part)</h2>
+
+<p>The prefork servers (like Starman and Apache mpm-prefork) work in a
+straightforward way: they accept a connection, serve the file or the
+output, when the transmission is over they pick up another one. To
+avoid the creation of bottlenecks they spawn more processes.</p>
+<p>As you may see, there is a big problem. If you have pages or files
+which are long, say 500kb, or a few Mb, which is not really uncommon,
+and it's <i>very</i> common in my case, if the clients have slow
+connections, the processes will not pick up another connection until
+the page is served. The <a href="http://lwn.net/Articles/338407/">slowloris</a>)
+issue is known (well, you'll know it when you encounter the problem)
+and there are this kind of malicious attacks. There are some
+workarounds (again), but you're forgetting something: the 56k people.
+Maybe they are not so common, but why they should block your server?
+Are you going to ban them? No way!</p>
+<p>But, you think, you put a proxy in front of Starman exactly for this
+reason: to avoid binding Starman for too long. It's the whole point of
+the proxy: the backend works fast, transmits the data, and next! It's
+a proxy's matter to work with the crowd out there.</p>
+<p>There are 2, big problems with mod_proxy + mpm-prefork:</p>
+<ul>
+<li><a name="item_It_s_a__i_prefork__i_"></a><b>It's a <i>prefork</i></b>
+<p>So if the connections are slow, the bottleneck is
+there. You can create a Denial of Service with a one-liner from the
+shell over a 56k. You could increase the number of workers, but
+it's always a finite number.</p>
+</li>
+<li><a name="item_Its__i_buffering__i__does_not_work_as_expected"></a><b>Its <i>buffering</i> does not work as expected</b>
+<p>It doesn't buffer <i>at all</i> and Starman's workers (which are always
+less than the Apache's workers because they are more memory-hungry)
+are tied until the request is served. This defeats the whole point of
+having a proxy.</p>
+</li>
+</ul>
+<p>The workarounds just scale the problem: increase the workers until the
+machine have enough memory for them. Believe me, it's easy to eat all
+the memory with a couple of applications, down this road.</p>
+<p>Or, let Starman to serve only little dynamic pages, let Apache do the
+rest (if possible) and hope for the best. The problem is still there, anyway.</p>
+<p>To test this problem is trivial:</p>
+<pre class="prettyprint">for i in `seq 0 100` ; do wget -q --limit-rate 1 -O /dev/null \
+  http://target.tld &amp; 2&gt; /dev/null ; done</pre>
+
+<p>Open a browser, and I bet you can't open the page.</p>
+<p>This is a malicious attack, but the same problem happens with the 56k
+users or requests for big files. It's all working as expected, but the
+prefork problem and the lack (or just ridiculously low level) of
+buffering are just blocking the web-server.</p>
+<p>You think: yes, OK, nothing new, my php applications already have this
+problem, and I can survive. Wrong! Because you usually have a Starman
+server for each application, and a machine without huge memory have
+limited resources. So, count, how many children Starman can spawn?
+They are usually less then the Apache's workers. When Apache is
+proxying, it binds them until the request is served.</p>
+<p>Well, I hope you get the point. You can continue with workarounds or do the
+right thing: drop Apache as proxy, and use a real one: Nginx</p>
+<h2><a name="nginx_as_proxy"></a>Nginx as proxy</h2>
+
+<p>Why Nginx?</p>
+<p>Because Nginix doesn't suffer the slowloris problem <b>and</b> does a
+proper buffering, so the 2 problems are gone now. Plack and Nginx play
+very well together, and it's the commonly recommended setup.</p>
+<p>The setup is explained in detail in <a href="https://metacpan.org/module/Dancer::Deployment">Dancer::Deployment</a>, so I
+won't repeat it here.</p>
+<h2><a name="legacy_php_sites"></a>Legacy php sites</h2>
+
+<p>But now you have to manage the old php sites, which can't run on
+nginx. There are various setups, but the <b>quickest</b> is something like
+this:</p>
+<ul>
+<li>
+<p>Make Apache to listen to 127.0.0.1:8080</p>
+</li>
+<li>
+<p>For each server add this Nginx configuration:</p>
+<pre class="prettyprint">server {
+    listen 80;
+    server_name your.hostname.tld
+    root /your/root/
+    location / {
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://127.0.0.1:8080;
+    }   
+}</pre>
+
+<p>Which basically pass <i>everything</i> to Apache. You can optimize it by letting
+nginx to serve the static files, like the images, of course. Read the doc, if
+you're interested. I found this interesting:
+<a href="http://kbeezie.com/view/apache-with-nginx/">http://kbeezie.com/view/apache-with-nginx/</a></p>
+</li>
+</ul>
+<h2><a name="author"></a>Author</h2>
+
+<p>This article has been written by Marco Pessotto (a.k.a. melmothX) in 2012 as a
+personal note and reviewed for the Perl Dancer Advent Calendar 2012. The
+original is located at
+<a href="http://laltromondo.dynalias.net/~iki/informatica/soft/dancer_and_apache/">LAltroMondo Wiki</a></p>
+<p>No copyright, public domain.</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

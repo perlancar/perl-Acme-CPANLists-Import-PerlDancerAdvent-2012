@@ -1,0 +1,559 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Building a Search Web App with Dancer and Sphinx | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="building_a_search_web_app_with_dancer_and_sphinx"></a>Building a Search Web App with Dancer and Sphinx</h1>
+
+<p>In this article, we'll develop a basic search application using Dancer and
+<a href="http://sphinxsearch.com/">Sphinx</a>. Sphinx is an open source search engine
+that's fairly easy to use, but powerful enough to be deployed in high-traffic
+sites, such as Craigslist and Dailymotion.</p>
+<p>In keeping with this year's Dancer Advent Calendar trend, the example app will
+be built on Dancer 2, but it should work just as well with Dancer 1.</p>
+<p>Alright, let's get to work.</p>
+<h2><a name="the_data"></a>The Data</h2>
+
+<p>Our web application will be used to search through documents stored in a MySQL
+database. We'll use a simple table with the following structure:</p>
+<pre class="prettyprint">CREATE TABLE documents (
+    id int NOT NULL AUTO_INCREMENT,
+    title varchar(200) NOT NULL,
+    contents_text text NOT NULL,
+    contents_html text NOT NULL,
+    PRIMARY KEY (id)
+);</pre>
+
+<p>Each document has an unique ID, a title, and contents, stored as both plain text
+and as HTML. We need the two formats for different purposes -- HTML will be used
+to display the document in the browser, while plain text will be fed to the
+indexing mechanism of the search engine (because we do not want to index the
+HTML tags, obviously).</p>
+<p>We can populate the database with any kind of document data -- for my test
+version, I used a simple script to fill the database with POD documentation
+extracted from Dancer distribution. The script is included at the end of this
+article, in case you'd like to use it yourself.</p>
+<h2><a name="installation_and_configuration_of_sphinx"></a>Installation and Configuration of Sphinx</h2>
+
+<p>Sphinx can be installed pretty easily, using one of the pre-compiled <code>.rpm</code> or
+<code>.deb</code> packages, or the source tarball. These are available at the <a href="http://sphinxsearch.com/downloads/release/">download
+page at SphinxSearch.com</a> -- grab the
+one that suits you and follow the <a href="http://sphinxsearch.com/docs/current.html#installation">installation
+instructions</a>.</p>
+<p>When Sphinx is installed, it needs to be configured before we can play with it.
+Its main configuration file is usually located at <code>/etc/sphinx/sphinx.conf</code>.
+For our purposes, a very basic setup will do -- we'll put the following in the
+<code>sphinx.conf</code> file:</p>
+<pre class="prettyprint">source documents
+{
+    type        = mysql
+    sql_host    = localhost
+    sql_user    = user
+    sql_pass    = hunter1
+    sql_db      = docs
+
+    sql_query   = \
+        SELECT id, title, contents_text FROM documents
+}
+
+index test
+{
+    source          = documents
+    charset_type    = utf-8
+    path            = /usr/local/sphinx/data/test
+}</pre>
+
+<p>This defines one <i>source</i>, which is what Sphinx uses to gather data, and one
+<i>index</i>, which will be created by processing the collected data and will then
+be queried when we perform the searches. In our case, the source is the
+documents database that we just created. The <code>sql_query</code> directive defines the
+<code>SELECT</code> query that Sphinx will use to pull the data, and it includes all the
+fields from the <code>documents</code> table, except <code>contents_html</code> -- like we said,
+HTML is not supposed to be indexed.</p>
+<p>That's all that we need to start using Sphinx. After we make sure the <code>searchd</code>
+daemon is running, we can proceed with indexing the data. We call <code>indexer</code>
+with the name of the index:</p>
+<pre class="prettyprint">$ indexer test</pre>
+
+<p>It should spit out some information about the indexing operation, and when it's
+done, we can do our first search:</p>
+<pre class="prettyprint">$ search "plugin"
+
+index 'test': query 'plugin ': returned 8 matches of 8 total in 0.002 sec
+
+displaying matches:
+1. document=19, weight=2713
+2. document=44, weight=2694
+3. document=20, weight=1713
+4. document=2, weight=1672
+5. document=1, weight=1640
+6. document=13, weight=1640
+7. document=27, weight=1601
+8. document=28, weight=1601</pre>
+
+<p>Apparently, there are 8 documents in the Dancer documentation with the word
+<i>plugin</i>, and the one with the ID of 19 is the highest ranking result. Let's
+see which document that is:</p>
+<pre class="prettyprint">mysql&gt; SELECT title FROM documents WHERE id = 19;
++----------------------------------------------------+
+| title                                              |
++----------------------------------------------------+
+| Dancer::Plugin - helper for writing Dancer plugins |
++----------------------------------------------------+</pre>
+
+<p>It's the documentation for <a href="https://metacpan.org/module/Dancer::Plugin">Dancer::Plugin</a>, and it makes total sense that this
+is the first result for the word <i>plugin</i>. Sphinx setup is thus ready and we
+can get to the web application part of our little project.</p>
+<h2><a name="the_basic_application"></a>The Basic Application</h2>
+
+<p>We'll start with a simple web application (let's call it <code>DancerSearch</code>) that
+just shows a search form, and then we'll extend it with more features. It will
+be using Dancer 2.0, and the <a href="https://metacpan.org/module/Dancer::Plugin::Database">Dancer::Plugin::Database</a> plugin (we'll use it to
+access the documents database). The code below is the initial
+<code>lib/DancerSearch.pm</code> file:</p>
+<pre class="prettyprint">package DancerSearch;
+
+use Dancer 2.0;
+use Dancer::Plugin::Database;
+
+get '/' =&gt; sub {
+    template 'index';
+};
+
+1;</pre>
+
+<p>We're also going to need a little startup script, <code>bin/app.pl</code>:</p>
+<pre class="prettyprint">#!/usr/bin/env perl
+
+use Dancer 2.0;
+use DancerSearch;
+
+start;</pre>
+
+<p>And a simple layout -- <code>views/layouts/main.tt</code>:</p>
+<pre class="prettyprint">&lt;!doctype html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+    &lt;title&gt;Dancer Search Engine&lt;/title&gt;
+    &lt;link rel="stylesheet" href="css/style.css"&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+    &lt;h1&gt;Dancer Search Engine&lt;/h1&gt;
+    &lt;div id="content"&gt;
+        [% content %]
+    &lt;/div&gt;
+    &lt;/body&gt;
+&lt;/html&gt;</pre>
+
+<p>And, of course, a template for our index page. For now it'll just contain a
+search form -- <code>views/index.tt</code>:</p>
+<pre class="prettyprint">&lt;form action="/" method="get"&gt;
+    Search query:
+    &lt;input type="text" name="query"&gt;
+    &lt;input type="submit" value="Search"&gt;
+&lt;/form&gt;</pre>
+
+<p>Last but not least, we need a configuration file to tell our app which layout we
+want to use, and how to connect to our documents database using the
+Dancer::Plugin::Database plugin. This goes into <code>config.yml</code>:</p>
+<pre class="prettyprint">layout: main
+
+plugins:
+    Database:
+        driver:     mysql
+        host:       localhost
+        database:   docs
+        username:   user
+        password:   hunter1</pre>
+
+<p>We can now launch the application, and it will greet us with a search form.
+Which, unsurprisingly, doesn't work yet. Let's wire it up to Sphinx.</p>
+<h2><a name="the_sphinx__search_cpan_module"></a>The Sphinx::Search CPAN Module</h2>
+
+<p>There is a CPAN module called <a href="https://metacpan.org/module/Sphinx::Search">Sphinx::Search</a> that provides a Perl interface
+to Sphinx, and we're going to use it in our app. We put <code>use Sphinx::Search</code> in
+<code>DancerSearch.pm</code>, and add the following piece of code before the <code>get '/'</code>
+route handler:</p>
+<pre class="prettyprint"># Create a new Sphinx::Search instance
+my $sph = Sphinx::Search-&gt;new;
+# Match all words, sort by relevance, return the first 10 results
+$sph-&gt;SetMatchMode(SPH_MATCH_ALL);
+$sph-&gt;SetSortMode(SPH_SORT_RELEVANCE);
+$sph-&gt;SetLimits(0, 10);</pre>
+
+<p>This creates a new instance of Sphinx::Search (which will be used to talk to the
+Sphinx daemon and do the searches), and sets up a few basic options, such as how
+many results should be returned and in what order. Now comes the most
+interesting part -- actually performing a search in our application. We insert
+this chunk of code at the beginning of the <code>get '/'</code> route handler:</p>
+<pre class="prettyprint">if (my $phrase = params('query')-&gt;{'phrase'}) {
+    # Send the search query to Sphinx
+    my $results = $sph-&gt;Query($phrase);
+
+    my $retrieved_count = 0;
+    my $total_count;
+    my $documents = [];
+
+    if ($total_count = $results-&gt;{'total_found'}) {
+        $retrieved_count = @{$results-&gt;{'matches'}};
+        # Get the array of document IDs
+        my @document_ids = map { $_-&gt;{'doc'} } @{$results-&gt;{'matches'}};
+        # Join the IDs to use in SQL query (the IDs come from Sphinx, so we
+        # can trust them to be safe)
+        my $ids_joined = join ',', @document_ids;
+
+        # Select documents, in the same order as returned by Sphinx
+        # (the contents of $ids_joined comes from Sphinx)
+        my $sth = database-&gt;prepare('SELECT id, title FROM documents ' .
+            "WHERE id IN ($ids_joined) ORDER BY FIELD(id, $ids_joined)");
+        $sth-&gt;execute;
+
+        # Fetch all results as an arrayref of hashrefs
+        $documents = $sth-&gt;fetchall_arrayref({});
+    }
+
+    # Show search results page
+    return template 'index', {
+        phrase =&gt; encode_entities($phrase),
+        retrieved_count =&gt; $retrieved_count,
+        total_count =&gt; $total_count,
+        documents =&gt; $documents
+    };
+}</pre>
+
+<p>Let's go through what is happening here. First, we check if there was actually a
+search phrase in the query string (<code>params('query')-&gt;{'phrase'}</code>). If there
+was one, we pass it to the <code>$sph-&gt;Query()</code> method, which queries Sphinx and
+returns the search results (the returned data structure is briefly explained in
+the description of the Query method in Sphinx::Search documentation).</p>
+<p>We then check the number of results (<code>$results-&gt;{'total_found'}</code>), and if
+it's greater than zero, it means we found something and we need to retrieve the
+documents data from the database. Sphinx only returns the IDs of the matching
+documents (as shown earlier in the test search that we did using the command
+line), so we need to send a query to the database to get the actual data, such
+as document titles that we want to display in the results (note that we're using
+the <code>ORDER BY FIELD</code> construct in the <code>SELECT</code> query to maintain the same
+order as the list returned by Sphinx).</p>
+<p>When we have the documents data ready, we pass it along with other information
+(such as the total number of results) to be displayed in our index template.
+But, hold on a second -- the template is not yet ready to display the results,
+it only shows the search form. Let's fix that now -- below the search form, we
+add the following code:</p>
+<pre class="prettyprint">[% IF phrase %]
+    &lt;p&gt;Search results for &lt;strong&gt;&amp;quot;[% phrase %]&amp;quot;&lt;/strong&gt;&lt;/p&gt;
+
+    [% IF total_count %]
+    &lt;p&gt;
+        Found [% total_count %] hits.
+        Showing results 1 - [% retrieved_count %].
+    &lt;/p&gt;
+
+    &lt;ol&gt;
+    [% FOREACH document IN documents %]
+        &lt;li&gt;
+            &lt;a href="/document/[% document.id %]"&gt;[% document.title %]&lt;/a&gt;
+        &lt;/li&gt;
+    [% END %]
+    &lt;/ol&gt;
+    [% ELSE %]    
+    &lt;p&gt;
+        No hits -- try again!
+    &lt;/p&gt;
+    [% END %]
+[% END %]</pre>
+
+<p>This displays the phrase that was submitted, the number of hits, and a list of
+results (or a "no hits" message if there weren't any).</p>
+<p>And you know what? We're now ready to actually do a search in the browser:</p>
+<img src="/images/2012/14/search-results.png">
+
+<p>Neat, we have a working search application! We're just missing one important
+thing, and that is being able to access a document that was found. The results
+link to <code>/document/:document_id</code>, but that route isn't recognized by our app.
+No worries, we can fix that easily:</p>
+<pre class="prettyprint"># Get the document with the specified ID
+get '/document/:id' =&gt; sub {
+    my $sth = database-&gt;prepare('SELECT contents_html FROM documents ' .
+        'WHERE id = ?');
+    $sth-&gt;execute(params-&gt;{'id'});
+        
+    if (my $document = $sth-&gt;fetchrow_hashref) {
+        return $document-&gt;{'contents_html'};
+    }
+    else {
+        status 404;
+        return "Document not found";
+    }
+};</pre>
+
+<p>This route handler is pretty straightforward, we grab the ID from the URL, use
+it in a <code>SELECT</code> query to the documents table, and return the HTML contents of
+the matching document (or a 404 page, if there's no document with that ID).</p>
+<h2><a name="the_complete_application"></a>The Complete Application</h2>
+
+<p>This is the complete <code>DancerSearch.pm</code> file:</p>
+<pre class="prettyprint">package DancerSearch;
+
+use Dancer 2.0;
+use Dancer::Plugin::Database;
+use HTML::Entities qw( encode_entities );
+use Sphinx::Search;
+
+# Create a new Sphinx::Search instance
+my $sph = Sphinx::Search-&gt;new;
+# Match all words, sort by relevance, return the first 10 results
+$sph-&gt;SetMatchMode(SPH_MATCH_ALL);
+$sph-&gt;SetSortMode(SPH_SORT_RELEVANCE);
+$sph-&gt;SetLimits(0, 10);
+
+get '/' =&gt; sub {
+    if (my $phrase = params('query')-&gt;{'phrase'}) {
+        # Send the search query to Sphinx
+        my $results = $sph-&gt;Query($phrase);
+
+        my $retrieved_count = 0;
+        my $total_count;
+        my $documents = [];
+
+        if ($total_count = $results-&gt;{'total_found'}) {
+            $retrieved_count = @{$results-&gt;{'matches'}};
+            # Get the array of document IDs
+            my @document_ids = map { $_-&gt;{'doc'} } @{$results-&gt;{'matches'}};
+            # Join the IDs to use in SQL query (the IDs come from Sphinx, so we
+            # can trust them to be safe)
+            my $ids_joined = join ',', @document_ids;
+
+            # Select documents, in the same order as returned by Sphinx
+            my $sth = database-&gt;prepare('SELECT id, title FROM documents ' .
+                "WHERE id IN ($ids_joined) ORDER BY FIELD(id, $ids_joined)");
+            $sth-&gt;execute;
+
+            # Fetch all results as an arrayref of hashrefs
+            $documents = $sth-&gt;fetchall_arrayref({});
+        }
+
+        # Show search results page
+        return template 'index', {
+            phrase =&gt; encode_entities($phrase),
+            retrieved_count =&gt; $retrieved_count,
+            total_count =&gt; $total_count,
+            documents =&gt; $documents
+        };
+    }
+    else {
+        # No search phrase -- show just the search form
+        template 'index';
+    }
+};
+
+# Get the document with the specified ID
+get '/document/:id' =&gt; sub {
+    my $sth = database-&gt;prepare('SELECT contents_html FROM documents ' .
+        'WHERE id = ?');
+    $sth-&gt;execute(params-&gt;{'id'});
+        
+    if (my $document = $sth-&gt;fetchrow_hashref) {
+        return $document-&gt;{'contents_html'};
+    }
+    else {
+        status 404;
+        return "Document not found";
+    }
+};
+
+1;</pre>
+
+<h2><a name="conclusion"></a>Conclusion</h2>
+
+<p>What we've built is still a very basic application, lacking many features -- the
+most obvious one that's missing is pagination, and being able to access results
+further down the list, not just the first ten. However, the code can be easily
+extended, thanks to the flexibility and ease of use of both Dancer and Sphinx.
+With a bit of effort, it can be made into an useful search app for a knowledge
+base site, or a wiki.</p>
+<p>I think this application is a good example of how Dancer benefits from being
+part of the Perl ecosystem, giving web developers the ability to make use of the
+thousands of modules in CPAN (like we just did with Sphinx::Search). This allows
+to build working prototypes of web applications and implement complex features
+in a very short time.</p>
+<h2><a name="the_pod_extraction_script"></a>The POD Extraction Script</h2>
+
+<p>As promised, this is the script that I used to extract the POD from Dancer
+distribution and store it in the MySQL database:</p>
+<pre class="prettyprint">#!/usr/bin/env perl
+
+package MyParser;
+
+use strict;
+use vars qw(@ISA);
+
+use Pod::Simple::PullParser ();
+BEGIN { @ISA = ('Pod::Simple::PullParser') }
+
+use DBI;
+use File::Find;
+use Pod::Simple::Text;
+use Pod::Simple::HTML;
+
+# Variables to hold the text and HTML produced by POD parsers
+my ($text, $html);
+# Create parser objects and tell them where their output will go
+(my $parser_text = Pod::Simple::Text-&gt;new)-&gt;output_string(\$text);
+(my $parser_html = Pod::Simple::HTML-&gt;new)-&gt;output_string(\$html);
+
+# Initialize database connection
+my $dbh = DBI-&gt;connect("dbi:mysql:dbname=docs;host=localhost", "user",
+    "hunter1")
+    or die $!;
+
+sub run {
+    my $self = shift;
+    my (@tokens, $title);
+
+    while (my $token = $self-&gt;get_token) {
+        push @tokens, $token;
+
+        # We're looking for a "=head1 NAME" section
+        if (@tokens &gt; 5) {
+            if ($tokens[0]-&gt;is_start &amp;&amp; $tokens[0]-&gt;tagname eq 'head1' &amp;&amp;
+                $tokens[1]-&gt;is_text &amp;&amp; $tokens[1]-&gt;text =~ /^name$/i &amp;&amp;
+                $tokens[4]-&gt;is_text)
+            {
+                $title = $tokens[4]-&gt;text;
+                # We have the title, so we can ignore the remaining tokens
+                last;
+            }
+
+            shift @tokens;
+        }
+    }
+
+    # No title means no POD -- we're done with this file
+    return if !$title;
+
+    print "Adding: $title\n";
+
+    $parser_text-&gt;parse_file($self-&gt;source_filename);
+    $parser_html-&gt;parse_file($self-&gt;source_filename);
+
+    # Add the new document to the database
+    $dbh-&gt;do("INSERT INTO documents (title, contents_text, " .
+        "contents_html) VALUES(?, ?, ?)", undef, $title, $text, $html);
+
+    # Clear the content variables and reinitialize parsers
+    $text = $html = "";
+    $parser_text-&gt;reinit;
+    $parser_html-&gt;reinit;
+}
+
+my $parser = MyParser-&gt;new;
+
+find({ wanted =&gt; sub {
+    if (-f and /\.pm$|\.pod$/) {
+        $parser-&gt;parse_file($File::Find::name);
+        $parser-&gt;reinit;
+    }
+}, no_chdir =&gt; 1 }, shift || '.');</pre>
+
+<p>You can run it with one argument, which is the location of the directory that
+will be scanned (recursively) for .pm/.pod files, or with no arguments, in which
+case the script will work with the current directory.</p>
+<p>(Note: The script makes use of <a href="https://metacpan.org/module/Pod::Simple">Pod::Simple</a>, which I'm not very familiar with,
+so it's possible that I'm doing something stupid with it -- if that's the case,
+please let me know.)</p>
+<h1><a name="author"></a>Author</h1>
+
+<p><a href="http://odyniec.net/">Michal Wojciechowski</a>, <code>&lt;odyniec@odyniec.net&gt;</code></p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

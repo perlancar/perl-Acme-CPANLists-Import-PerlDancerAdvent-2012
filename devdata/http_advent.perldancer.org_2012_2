@@ -1,0 +1,209 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> New user authentication and authorisation framework | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="new_user_authentication_and_authorisation_framework"></a>New user authentication and authorisation framework</h1>
+
+<p><a href="https://metacpan.org/module/Dancer::Plugin::Auth::Extensible">Dancer::Plugin::Auth::Extensible</a> was released recently, to offer a simple to
+use yet flexible framework for user authentication and role-based authorisation
+for Dancer-powered webapps.</p>
+<p><a href="https://metacpan.org/module/Dancer::Plugin::Auth::RBAC">Dancer::Plugin::Auth::RBAC</a> was already out there and available, but I never
+really got on with it, felt it was a little cumbersome to use, and needed a fair
+amount of work to bring it up to scratch; so, I decided instead to start a new
+project with the aims of making user authentication (and role-based
+authorisation, where needed) simple.</p>
+<p>So, what makes <a href="https://metacpan.org/module/Dancer::Plugin::Auth::Extensible">Dancer::Plugin::Auth::Extensible</a> different?</p>
+<h2><a name="it_s_simple"></a>It's simple</h2>
+
+<p>Denoting routes for which the user must be logged in is easy - subroutine
+attributes are used to indicate that the user must be logged in, or must have a
+particular role:</p>
+<pre class="prettyprint">get '/secret' =&gt; sub :RequireLogin {
+    return "User must be logged in to see this.";
+};
+
+post '/user' =&gt; sub :RequireRole(Admin) {
+    # User must be logged in and have the 'Admin' role in order to hit this
+    # route
+};</pre>
+
+<p>Simple, eh?  The auth framework will deal with ensuring the user is logged in
+(and has the appropriate role, if you're using roles and the route requires a
+specific role), and if not, will present them a login page (the framework even
+provides a basic login page so you can get up and running quickly, but you can
+of course override that).</p>
+<p>For the most simple cases, you might not need roles, simply the requirement that
+a user be logged in - that's fine, you can disable roles entirely.</p>
+<h2><a name="flexible_authentication_sources"></a>Flexible authentication sources</h2>
+
+<p>The auth framework plugin ships with a few "authentication provider" classes to
+authenticate against different sources:</p>
+<ul>
+<li><a name="item_Account_details_in_the_app_s_config"></a><b>Account details in the app's config</b>
+<p>The <code>Config</code> auth provider reads usernames, passwords (preferably crypted) and
+optionally lists of roles from the app's config.  This is a simple and easy way
+to get started.</p>
+</li>
+<li><a name="item_Account_details_in_a_database_via__a_href__https___metacpan_org_module_Dancer__Plugin__Database__Dancer__Plugin__Database__a_"></a><b>Account details in a database via <a href="https://metacpan.org/module/Dancer::Plugin::Database">Dancer::Plugin::Database</a></b>
+<p>The <code>Database</code> provider reads usernames, passwords, optionally roles and other 
+details from a database, using <a href="https://metacpan.org/module/Dancer::Plugin::Database">Dancer::Plugin::Database</a>.</p>
+</li>
+<li><a name="item_Unix_system_accounts"></a><b>Unix system accounts</b>
+<p>The <code>Unix</code> provider authenticates against Linux/Unix system user accounts;
+user groups are used for roles, so you can e.g. require a user be in the
+<code>wheel</code> group, or whatever other user groups you have defined.</p>
+</li>
+<li><a name="item_Accounts_in_a_database__via_DBIC"></a><b>Accounts in a database, via DBIC</b>
+<p>An auth provider to authenticate against a database using DBIC via
+<a href="https://metacpan.org/module/Dancer::Plugin::DBIC">Dancer::Plugin::DBIC</a> is coming soon.</p>
+</li>
+</ul>
+<p>If the authentication source you wish to use isn't already supported, it's
+pretty trivial to write a new authentication provider; they are simply
+subclasses of <a href="https://metacpan.org/module/Dancer::Plugin::Auth::Extensible::Provider::Base">Dancer::Plugin::Auth::Extensible::Provider::Base</a> which
+implement the required methods.</p>
+<p>Further providers are planned for e.g. <code>LDAP</code>, <code>IMAP</code>, <code>ActiveDirectory</code> etc.</p>
+<h2><a name="it_s_flexible"></a>It's flexible</h2>
+
+<p>Multiple authentication realms are supported, so you can configure the framework
+to, for example, first check a database using the <code>Database</code> provider, then
+check against an LDAP server (when that provider is available).  You can use the
+same provider in multiple realm configurations, too - for instance, if you
+needed to check against multiple databases.</p>
+<h2><a name="secure_password_handling_is_easy"></a>Secure password handling is easy</h2>
+
+<p><a href="https://metacpan.org/module/Crypt::SaltedHash">Crypt::SaltedHash</a> is used to handle crypted passwords for you, so it's easy
+to handle passwords securely (you wouldn't want to be storing passwords in plain
+text, would you?  (I sincerely hope not.))</p>
+<h2><a name="convenient_keywords_are_provided"></a>Convenient keywords are provided</h2>
+
+<p>Convenient keywords are provided:</p>
+<ul>
+<li><a name="item__code_logged_in_user__code_"></a><b><code>logged_in_user</code></b>
+<p>If the user is logged in, returns a hashref of details about the currently
+logged-in user.  What you get back will depend on the provider in use, but is
+flexible - for instance, if you're using the <code>Database</code> provider, all columns
+of the user table will be returned, so if you e.g. have columns containing the
+user's name and email address, you'll find them here.</p>
+</li>
+<li><a name="item__code_user_has_role__code_"></a><b><code>user_has_role</code></b>
+<p>Allows you to manually check if the logged-in-user has a role you're interested
+in - for example:</p>
+<pre class="prettyprint">if (user_has_role('BeerDrinker')) {
+    pour_beer();
+}</pre>
+
+</li>
+<li><a name="item__code_user_roles__code_"></a><b><code>user_roles</code></b>
+<p>Returns a list of the currently logged-in user's roles.</p>
+</li>
+<li><a name="item__code_authenticate_user__code_"></a><b><code>authenticate_user</code></b>
+<p>Usually you'll want to let the built-in login handling code deal with
+authenticating users, but in case you need to do it yourself, this keyword
+accepts a username and password, and checks whether they are valid.</p>
+</li>
+</ul>
+<h2><a name="give_it_a_try_"></a>Give it a try!</h2>
+
+<p>The framework is still new, but is in a state where it's ready to use.  If it is
+of interest to you, have a play with it, and do feel free to submit issues or
+pull requests on GitHub if you find any issues or would like to suggest new
+features:</p>
+<p><a href="https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible">https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible</a></p>
+<h2><a name="author"></a>AUTHOR</h2>
+
+<p>David Precious (BIGPRESH)</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

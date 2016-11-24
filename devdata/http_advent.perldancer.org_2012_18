@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Meet Dancer users - Crowdtilt | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="meet_dancer_users___crowdtilt"></a>Meet Dancer users - Crowdtilt</h1>
+
+<img src="/images/2012/18/crowdtilt_RGB_gradient_medium.png">
+
+<p>Will Wolf of the successful startup <a href="http://www.crowdtilt/">Crowdtilt</a> kindly
+agreed to take part in a mini-interview on how Dancer has helped play a part in
+their success.</p>
+<p>Crowdtilt was founded back in February, and within six weeks, CrowdTilt users
+had raised over $1 million, and has continued to grow ever since.</p>
+<p>Crowdtilt allows users to successfully group-fund projects and activities, with
+nobody paying until the drive "tilts" - reaches the target level.</p>
+<p>A couple of fun campaigns include
+<a href="https://www.crowdtilt.com/campaigns/halloween-yacht-party-oct-31st">a spectacular Halloween yacht party</a>
+and <a href="https://www.crowdtilt.com/campaigns/up-all-night-las-vegas-nye-2013">New Years Eve in Las Vegas with a private jet, limos and high-class party</a>.</p>
+<p>There are plenty of more serious campaigns which Crowdtilt has made possible,
+too - including 
+<a href="https://www.crowdtilt.com/campaigns/donations-for-captain-edward-wesley-klein">a campaign to raise donations for Captain Edward Wesley Klein</a>,
+a valiant US soldier severely injured by an IED, suffering major injuries -
+he has lost both legs, his right arm, two fingers on his left hand, and has a 
+broken pelvis.  The campaign was to help his family with the medical expenses.
+Amanda, the organiser of the campaign, set the "tilt" amount at $200 USD.  The
+campaign raised a staggering <i>$30,142.50</i> USD.</p>
+<p>Crowdtilt now have special arrangements for charitable fundraising, including
+options to automatically send tax-deductible receipts to donors.</p>
+<p>In the aftermath of Hurricane Sandy, Crowdtilt waived their fees for fundraisers
+to help with the recovery - the Crowdtilt community collectively raised more
+than $180,000 for those affected by the Hurricane.</p>
+<p>Crowdtilt have appeared in the media plenty of times.  Forbes stated that "The 
+network is so strong, and the tools themselves are really easy to use and
+well-designed".</p>
+<h2><a name="so__crowdtilt_use_dancer"></a>So, CrowdTilt use Dancer?</h2>
+
+<p>Yes - Crowdtilt's system is developed by a team of five developers using Perl
+and Dancer.</p>
+<p>I asked Will a few quick questions on how Dancer has contributed to Crowdtilt's
+success.</p>
+<ul>
+<li><a name="item_What_drew_you_to_Dancer_originally_"></a><b>What drew you to Dancer originally?</b>
+<p>I loved the simplicity and straight-forwardness of Dancer.  It's so
+dead-simple and just gets out of your way.  At a startup, you just want to
+pick tools that let you hit the ground running, and Dancer definitely gave
+us that.</p>
+</li>
+<li><a name="item_What_benefits_has_Dancer_brought_to_CrowdTilt_"></a><b>What benefits has Dancer brought to CrowdTilt?</b>
+<p>The Dancer community has always been responsive to us when we've had
+questions, or pull requests, or issues.  That's really important in any
+software project or piece of technology you use.  As I mentioned, Dancer
+does have a pretty awesome plugin ecosystem, giving us things like
+<a href="https://metacpan.org/module/Dancer::Plugin::DBIC">Dancer::Plugin::DBIC</a>, <a href="https://metacpan.org/module/Dancer::Plugin::Stomp">Dancer::Plugin::Stomp</a>, etc.  Not having to 
+reinvent the wheel is always nice.</p>
+</li>
+<li><a name="item_What_would_you_like_to_see_changed_"></a><b>What would you like to see changed?</b>
+<p>As our Dancer apps have grown bigger, we've had some growing pains with
+Dancer, but the code base is so simple that it's generally fairly trivial
+for us to jump in and figure out what needs to be done.  We're really
+looking forward to Dancer2 and think that its OO/Moose core will help a
+*lot* with some of the stumbling blocks we've run into along the way.</p>
+<p>One of the issues we've run into is with the error hooks.  They don't
+provide an elegant way currently to manipulate all of your error responses
+as much as we'd like.  We have some internal workarounds in place, and
+would like to eventually push some of those changes back into Dancer.  I
+think these issues should be addressed pretty nicely by Dancer2 as well.</p>
+<p>Another thing I'd like to see is Dancer having support for globally unique
+id's per request.  This is pretty much required in an environment with
+multiple servers, and trying to track down specific requests in the logs,
+etc.  Currently dancer can give you the "hit #" in the log, which is just a
+numeric counter, but this resets whenever you restart the app, and will
+obviously have duplicate entries for different requests across machines and
+different dancer processes.  We currently generate our own guid's per
+request, but would like to see that functionality moved into Dancer itself.</p>
+<p>Overall, I think Dancer2 will address a lot of the growing pains we've
+seen, and also that Dancer itself has seen.  It's definitely a step in the
+right direction for the Dancer community, and the work that's been done
+recently to make the transition to Dancer2 as easy as possibly has been
+really exciting to watch.</p>
+</li>
+<li><a name="item_Are_there_any_particular_opinions__quotes_soundbites_etc_expressed_by_any_of_your_team_about_Dancer_"></a><b>Are there any particular opinions, quotes/soundbites etc expressed by any of your team about Dancer?</b>
+<p>Every day I'm a Dancin'.</p>
+</li>
+<li><a name="item_How_many_people_are_responsible_for_development_at_Crowdtilt___How_many_of_those_work_on_code_using_Dancer_"></a><b>How many people are responsible for development at Crowdtilt?  How many of those work on code using Dancer?</b>
+<p>We currently have 5 developers who all touch code using Dancer every day.</p>
+</li>
+<li><a name="item_How_many_projects_campaigns_have_been_funded_through_Crowdtilt_to_date_"></a><b>How many projects/campaigns have been funded through Crowdtilt to date?</b>
+<p>Our founders have asked us not to disclose growth figures or numbers right
+now, but we'll have a big announcement about them coming soon!  I can say
+that we're very happy with our growth and the direction things are headed.
+We're having a big impact by enabling lots of people to do and accomplish
+things they otherwise wouldn't be able to do.</p>
+</li>
+<li><a name="item_What_is_the_average_campaign_fund_"></a><b>What is the average campaign fund?</b>
+<p>Again, without going into specifics, I can say that we have campaigns ranging
+from $20 all the way to $50,000+.  Very frequently, a 'small' campaign will
+raise orders of magnitude more than they expect.  In fact, our campaigns on
+average raise 188% of their goal, or 'tilt' amount.</p>
+</li>
+<li><a name="item_What_is_the_approximate_total_funds_raised_through_Crowdtilt_to_date_"></a><b>What is the approximate total funds raised through Crowdtilt to date?</b>
+<p>Six weeks after our launch back in February our users had raised over $1
+million, and we've been very happy with our growth and the amount of users
+we've been able to help since then.</p>
+</li>
+<li><a name="item_Are_there_any_specific_campaigns_you_think_ought_to_be_highlighted_"></a><b>Are there any specific campaigns you think ought to be highlighted?</b>
+<p>There are so many great campaigns that flow through Crowdtilt, it's hard to
+pick out specific gems.  Of course the 
+<a href="https://www.crowdtilt.com/campaigns/halloween-yacht-party-oct-31st">Halloween Yacht Party</a>
+was a fun one, and if you haven't seen our New Years Eve Party campaign that 
+just tilted on Monday (in a matter of hours, I might add), you can check it out 
+here:</p>
+<p><a href="https://crowdtilt.com/campaigns/up-all-night-las-vegas-nye-2013">https://crowdtilt.com/campaigns/up-all-night-las-vegas-nye-2013</a></p>
+<p>Those types of campaigns are definitely fun, and a common use case for
+Crowdtilters, but we really love to see the campaigns that truly have a
+meaningful impact on people's lives.  One of the more recent examples that
+I love is this one:</p>
+<p><a href="https://www.crowdtilt.com/campaigns/donations-for-captain-edward-wesley-klein">https://www.crowdtilt.com/campaigns/donations-for-captain-edward-wesley-klein</a></p>
+<p>Amanda set out to raise a modest $200 to just get any help she could with
+medical bills for Captain Klein, and was overwhelmed by the amazing support
+she received.  She ended up raising over $30,000, well beyond what she ever
+could have imagined.</p>
+<p>Here's another great one put together by the Reddit community, re-uniting a
+Comic Book writer with his collection:</p>
+<p><a href="https://reddit.crowdtilt.com/campaigns/help-karl-kesel-keep-his-comic-collection">https://reddit.crowdtilt.com/campaigns/help-karl-kesel-keep-his-comic-collection</a></p>
+</li>
+<li><a name="item_Thanks_for_taking_part_in_this_brief_interview_"></a><b>Thanks for taking part in this brief interview!</b>
+<p>Thanks for taking the time to check out our company, and for being a big
+part of the Dancer community!</p>
+</li>
+</ul>
+<h2><a name="do_you_use_dancer_want_to_share_your_story"></a>Do you use Dancer?  Want to share your story?</h2>
+
+<p>If you're interested in taking part in a simple interview in how Dancer has
+helped you for a future advent calendar post, it's not too late, there are still
+slots left - just drop me a mail!</p>
+<h1><a name="author"></a>AUTHOR</h1>
+
+<p>David Precious (BIGPRESH)</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

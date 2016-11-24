@@ -1,0 +1,229 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Meet Dancer users - The Game Crafter | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="meet_dancer_users___the_game_crafter"></a>Meet Dancer users - The Game Crafter</h1>
+
+<img src="/images/2012/19/tgc-250x160.png">
+
+<p><a href="http://www.thegamecrafter.com/">The Game Crafter</a> is the world's first
+web-to-print game publishing company and offers a print on demand game
+publishing service. TGC empowers game designers around the world by allowing
+them to make a board game, card game, and custom playing cards through a
+website. Using the latest web technology, TGC developed a website platform that
+simplifies the design, manufacturing, and retail processes related to tabletop
+games.</p>
+<p>The Game Crafter has a community of over 20,000 users, growing at a rate of over
+1,000 users a month, and selling around 2,000 games every month.</p>
+<p>With that growth, and praised by TechCrunch, Wired and Mashable among others,
+it's clear to see that The Game Crafter is going places.  The Game Crafter's 
+founder, JT Smith helpfully agreed to a short interview on how Dancer has helped
+The Game Crafter to succeed:</p>
+<ul>
+<li><a name="item_What_drew_you_to_Dancer_originally_"></a><b>What drew you to Dancer originally?</b>
+<p>I had just finished writing <a href="http://www.lacunaexpanse.com/">Lacuna Expanse</a>,
+which used bare-metal Plack. I figured there were some better tools out there to
+give me routing and a few other things, so I started experimenting.  Catalyst
+was way too big and some of the other micro web frameworks seemed to be not much
+more than bare-metal Plack, so it quickly came down to Dancer and Mojo. I'd like
+to say that there was some cool architectural reason I chose Dancer over Mojo,
+but really it came down to style. Dancer just fit in to my design sense better
+than Mojo.</p>
+</li>
+<li><a name="item_What_benefits_has_Dancer_brought_to_The_Game_Crafter_"></a><b>What benefits has Dancer brought to The Game Crafter?</b>
+<p>Initially it was simply how easy it was to pick up Dancer and just get
+*something* working. When I picked Dancer for TGC I was at the beginning of a
+full rewrite of TGC, so being able to go from blank canvas to anything at all
+in a few minutes was a huge win for productivity.</p>
+<p>The other two big things Dancer gives us are the easy plugin system and the
+hooks system. When I picked Dancer I wasn't looking for a tool that did
+everything for me out of the box. I was looking for something I could grow into
+and build the app the way I wanted to build it. Dancer is easily extensible
+without getting in my way or limiting me, and that's a big win.</p>
+</li>
+<li><a name="item_What_features_of_Dancer__or_the_community_or_ecosystem__especially_stand_out_to_you_"></a><b>What features of Dancer (or the community or ecosystem) especially stand out to you?</b>
+<p>Right off the bat when I started using Dancer I ran into a design limitation
+with the existing hooks. I posted a quick patch to resolve the problem I was
+having and it was accepted quickly. But that evolved into a larger discussion
+with the core dev team about how to handle hooks in a more generic sense. Having
+a responsive and forward-thinking team means Dancer has a very bright future.</p>
+<p>The plug-in ecosystem is really something special about Dancer. If you're just
+looking to whip up a quick app in an afternoon you can almost certainly find a
+plugin that will out-of-the-box do exactly what you need. Likewise, if you want
+to build something bigger, the plug-in system gives you the way to extend
+Dancer.</p>
+<p>I believe so much in Dancer that I've given talks about it at local Perl
+Monger's groups, have taught a few people how to use it, and have even built my
+next generation web services framework at Plain Black on top of it. So pretty
+much every new app we build these days, whether at TGC or one of my other
+companies, is being built on top of Dancer.</p>
+</li>
+<li><a name="item_What_would_you_like_to_see_changed_"></a><b>What would you like to see changed?</b>
+<p>Honestly the big thing I would change about Dancer is already well underway.
+It's all covered in Dancer 2, which is going to a better and more accessible
+object system. Dancer 2 is looking spectacular to me, and I'm looking forward to
+transitioning my code-base to it early in 2013.</p>
+<p>The other thing that I would change is that Dancer::Test currently doesn't have
+a way of posting a file. I've resorted to using Plack::Test to test file
+uploads. I should probably just submit a patch to make it work, but I haven't
+done that yet.</p>
+</li>
+<li><a name="item_Are_there_any_particular_opinions__quotes_soundbites_etc_expressed_by_any_of_your_team_about_Dancer_"></a><b>Are there any particular opinions, quotes/soundbites etc expressed by any of your team about Dancer?</b>
+<p>My team at TGC is very small...just me and one other person. However, everyone
+I've shown the codebase to can't believe how tiny everything is. You need to
+write so little code to do so much.</p>
+</li>
+<li><a name="item_How_many_developers_do_you_have___How_many_use_Dancer_"></a><b>How many developers do you have?  How many use Dancer?</b>
+<p>At The Game Crafter we have only two developers and we both use Dancer.</p>
+</li>
+<li><a name="item_How_many_total_employees_do_you_have_"></a><b>How many total employees do you have?</b>
+<p>There are 14 employees at The Game Crafter.</p>
+</li>
+<li><a name="item_How_many_TGC_users_are_there_"></a><b>How many TGC users are there?</b>
+<p>We have 20,000 users.</p>
+</li>
+<li><a name="item_How_many_different_games_have_been_produced_by_TGC_users_"></a><b>How many different games have been produced by TGC users?</b>
+<p>We sell about 2,000 games per month.</p>
+</li>
+<li><a name="item_How_many_copies_does_each_game_sell_on_average_"></a><b>How many copies does each game sell on average?</b>
+<p>Most games aren't publicly available in the shop, and a lot of games that are
+available in the shop don't get any publicity from their designer's, so
+therefore only sell a few copies. Of those games that get promoted by their
+designers, they sell 10 to 50 copies of their game on average. Our best selling
+games usually sell 100 or 200 copies and then get picked up by another
+publisher.</p>
+</li>
+<li><a name="item_What_is_the_average_cost_of_a_game_"></a><b>What is the average cost of a game?</b>
+<p>An average card game goes for about $15, while your average board game goes for
+about $25. However, we also have more complicated games that sell well at $40
+per copy.</p>
+</li>
+<li><a name="item_What_is_the_most_popular_game_so_far_in_terms_of_sales_"></a><b>What is the most popular game so far in terms of sales?</b>
+<p>Our current best selling game is called
+<a href="https://www.thegamecrafter.com/games/plague-the-card-game">Plague: The Card Game</a></p>
+</li>
+<li><a name="item_What_is_your_favourite_game_so_far_"></a><b>What is your favourite game so far?</b>
+<p>My favorite game is one that I've developed called
+<a href="https://www.thegamecrafter.com/games/merc">MERC</a>.
+However, my favorite game not developed by me is called
+<a href="https://www.thegamecrafter.com/games/scarborough-fair">Scarborough Fair</a>.</p>
+</li>
+<li><a name="item_How_does_the_production_process_work_"></a><b>How does the production process work?</b>
+<p>Basically a designer comes up with an idea, uploads their artwork and rules to
+our web site, and about a week later they get a physical copy of their game in
+the mail.</p>
+<p>In more technical terms we use Dancer to generate a publishing interface to the
+user which walks them through the process of uploading and proofing their
+artwork. Then we have a bunch of background processes that turn that artwork
+into the files needed to run through our printing system. We manage those
+processes and a lot of other stuff through a bunch of administrative
+applications written on top of Dancer. The user is able to track every stage of
+this process through our web shop, which is also written in Dancer. Basically
+every aspect of our business from sales to publishing to inventory management to
+historical trends is handled through a series of custom-built Dancer
+applications.</p>
+</li>
+<li><a name="item_When_was_TGC_founded_"></a><b>When was TGC founded?</b>
+<p>The Game Crafter came into existence in January of 2001. The publishing service
+we offer now was launched in July 2009. The Dancer version of the site went live
+July 2011.</p>
+</li>
+</ul>
+<p>So, thanks JT for your time!</p>
+<h1><a name="author"></a>AUTHOR</h1>
+
+<p>David Precious (BIGPRESH)</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

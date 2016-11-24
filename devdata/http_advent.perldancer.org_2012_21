@@ -1,0 +1,293 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Writing a Quick NaNoWriMo Graphing Web Application with Dancer | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="writing_a_quick_nanowrimo_graphing_web_application_with_dancer"></a>Writing a Quick NaNoWriMo Graphing Web Application with Dancer</h1>
+
+<p>Just as December is the month of the Wreath, November is the month of the
+Write.  For the last twelve years, writers of all calibers, aspirations and
+genres participate in a writing marathon named the <a href="http://www.nanowrimo.org/">National Novel
+Writing Month</a> (also referenced to as <i>NaNoWriMo</i>).
+The challenge is simple: starting on November 1st, write fifty thousand words
+before the end of the month.</p>
+<p>Although the contest is purely personal, many persons find additional
+motivation by pitting their scores against each other. Lagging behind is one
+thing, but lagging behind while your nemesis is 2,000 words ahead of you? 
+Ah! <i>unacceptable</i>!</p>
+<p>In this perspective, wouldn't be nice to have a little web application
+that takes in the wordcount of a group of contestants, and displays
+a chart of everybody's progress?  
+Well, let's see how hard it is to get such an application up and
+running, shall we?</p>
+<h2><a name="the_specs"></a>The Specs</h2>
+
+<p>The graph is only going to be used for one month, so there's no need to get
+terribly fancy.  We'll use a CSV format looking like</p>
+<pre class="prettyprint">2010-11-01,Andy,0
+2010-11-01,Bernadette,0
+2010-11-01,Claude,0
+2010-11-02,Bernadette,120</pre>
+
+<p>That is, each wordcount entry is made of a timestamp, the writer's name and
+his or her entered count. It's simple, and 
+very easy to edit manually if anyone make a boo-boo during the month.</p>
+<p>The application we need around that is very simple. Basically, we need:</p>
+<ul>
+<li><a name="item_A_main_page__showing_a_graph_and_a_form_to_enter_new_results_"></a><b>A main page, showing a graph and a form to enter new results.</b>
+</li>
+<li><a name="item_An_auxiliary_page_to_process_the_input_of_a_new_word_count_"></a><b>An auxiliary page to process the input of a new word count.</b>
+</li>
+</ul>
+<p>Got it? Now, let's get cracking.</p>
+<h2><a name="creating_the_app"></a>Creating the App</h2>
+
+<p>Creating the skeleton of a new application in Dancer is incredibly
+complicated. First, we have to do</p>
+<pre class="prettyprint">$ dancer -a ournowrimo</pre>
+
+<p>and then, uh, we're done.  Okay, so maybe it's not that complicated after
+all. :-)</p>
+<p>For the templating system, we'll use <a href="https://metacpan.org/module/Mason">Mason</a>, so we 
+edit the configuration file and change the default templating to
+<a href="https://metacpan.org/module/Dancer::Template::Mason">Dancer::Template::Mason</a>:</p>
+<pre class="prettyprint">logger: "file"
+appname: "ournowrimo"
+template: mason</pre>
+
+<h2><a name="adding_the_actions"></a>Adding the Actions</h2>
+
+<p>By now, we have an application that is already in working order. It won't do
+anything, but if we were to launch it by running</p>
+<pre class="prettyprint">$ ./ournowrimo.pl</pre>
+
+<p>it would do it just fine.</p>
+<h3><a name="the_main_page"></a>The Main Page</h3>
+
+<p>For the main page, we don't do any heavy processing, we just want to invoke
+a template:</p>
+<pre class="prettyprint">get '/graph' =&gt; sub {
+    template 'index', { wrimoers =&gt; get_wrimoers() };
+};</pre>
+
+<p>That's it. For the url <code>/graph</code>, Dancer will 
+render the template <code>views/index.mason</code>, passing
+it the argument <code>wrimoers</code> (which is conveniently
+populated by the function <code>get_wrimoers()</code>).</p>
+<p>I'll not show the Mason template here, as it's
+a fairly mundane HTML affair, but you can peek
+at it at the application's Github repo (link below).  
+It is, however, using the <a href="http://code.google.com/p/flot/">Flot</a>
+jQuery plotting library to generate the graph,
+and it expects to get its data from an AJAX call.
+Which
+means that we need a new AJAX route for our application.</p>
+<h3><a name="feeding_graph_data_via_ajax"></a>Feeding graph data via AJAX</h3>
+
+<p>For the graph, we need the url <code>/data</code> to return 
+a JSON representation of the wordcount data. Nicely enough,
+Dancer has a <code>to_json()</code> function that takes care of the 
+JSON encapsulation. All that is left for us to do, really, is 
+to do the real data munging:</p>
+<pre class="prettyprint">get '/data' =&gt; sub {
+    open my $fh, '&lt;', $count_file;
+
+    my %contestant;
+    while (&lt;$fh&gt;) {
+        chomp;
+        my ( $date, $who, $count ) = split '\s*,\s*';
+
+        my $epoch = DateTime::Format::Flexible-&gt;parse_datetime($date)-&gt;epoch;
+        my $time = 1000 * $epoch;
+        $contestant{$who}{$time} = $count;
+    }
+
+    my @json;  # data structure that is going to be JSONified
+
+    while ( my ( $peep, $data ) = each %contestant ) {
+        push @json, { 
+            label     =&gt; $peep,
+            hoverable =&gt; \1,    # so that it becomes JavaScript's 'true'
+            data =&gt; [ map  { [ $_, $data-&gt;{$_} ] } 
+                    sort { $a &lt;=&gt; $b } 
+                    keys %$data ],
+        };
+    }
+
+    my $beginning = DateTime::Format::Flexible-&gt;parse_datetime( "2010-11-01")-&gt;epoch;
+    my $end       = DateTime::Format::Flexible-&gt;parse_datetime( "2010-12-01")-&gt;epoch;
+
+    push @json, {
+        label =&gt; 'de par',
+        data =&gt; [
+            [$beginning * 1000, 0],
+            [   DateTime-&gt;now-&gt;epoch * 1_000,
+                50_000 
+                  * (DateTime-&gt;now-&gt;epoch - $beginning)
+                  / ($end - $beginning)
+            ]
+          ],
+
+    };
+
+    to_json( \@json );
+};</pre>
+
+<p>For more serious AJAX interaction, there's also 
+<a href="https://metacpan.org/module/Dancer::Plugin::Ajax">Dancer::Plugin::Ajax</a> that adds
+an <code>ajax</code> route handler to the mix, but in our case a simple <code>get</code> 
+is perfectly satisfactory.</p>
+<h3><a name="processing_new_entries"></a>Processing New Entries</h3>
+
+<p>For the entry of a new word count, we are taking in a form request with two
+parameters, <i>who</i> and <i>count</i>:</p>
+<pre class="prettyprint">get '/add' =&gt; sub {
+    open my $fh, '&gt;&gt;', $count_file;
+    say $fh join ',', DateTime-&gt;now, params-&gt;{who}, params-&gt;{count};
+    close $fh;
+
+    redirect '/';
+};</pre>
+
+<p>Seriously, could things get any easier?</p>
+<h3><a name="bonus_feature__throwing_in_an_atom_feed"></a>Bonus Feature: Throwing in an Atom Feed</h3>
+
+<p>Since everything else resulted in a ridiculously small amount of code, 
+I decided to add a feed to the application to let everybody know of 
+wordcount updates.  Surely that will require a lot more coding?</p>
+<pre class="prettyprint">get '/feed' =&gt; sub {
+    content_type 'application/atom+xml';
+
+    # $feed is a XML::Atom::SimpleFeed object
+    my $feed = generate_feed();
+
+    return $feed-&gt;as_string;
+};</pre>
+
+<p>... Seemingly not, it won't.</p>
+<h2><a name="deployment"></a>Deployment</h2>
+
+<p>Dancer can be deployed a gazillion different ways. 
+As a standalone server (development heaven), as CGI (likely to be <i>sloooow</i>,
+but nice to it's there if everything else fail), as FastCGI, and as a
+<a href="https://metacpan.org/module/Plack">Plack</a> application.</p>
+<p>For example, to deploy is at a fastcgi talking to an Apache server, 
+we can launch the app as a plack-backed fastcgi</p>
+<pre class="prettyprint">plackup -s FCGI --listen /tmp/ournowrimo.socket ournowrimo.pl</pre>
+
+<p>configure Apache to treat it as an external fastcgi server</p>
+<pre class="prettyprint">Alias /wrimo/ /tmp/ournowrimo.fcgi/
+FastCgiExternalServer /tmp/ournowrimo.fcgi -socket /tmp/ournowrimo.socket</pre>
+
+<p>and everything should nicely begin to work together.</p>
+<h2><a name="the_result"></a>The Result</h2>
+
+<img src="http://babyl.dyndns.org/techblog/entry/ournowrimo/files/ournowrimo.png" />
+
+<h2><a name="peek_at_the_code_on_github"></a>Peek at the Code on Github</h2>
+
+<p>The full application  is available on
+<a href="http://github.com/yanick/ournowrimo">GitHub</a>.</p>
+<h2><a name="author"></a>Author</h2>
+
+<p>This article was originally a 
+<a href="http://babyl.dyndns.org/techblog/entry/ournowrimo">blog entry</a> by Yanick Champoux,
+modified for the Perl Dancer Advent Calendar 2010.</p>
+<h2><a name="reviewers"></a>Reviewers</h2>
+
+<h2><a name="copyright"></a>Copyright</h2>
+
+<p>Copyright (C) 2010 by Yanick Champoux <code>&lt;yanick@cpan.org&gt;</code></p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

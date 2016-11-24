@@ -1,0 +1,355 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> Dancer::Session::Redis - Writing a session engine for Dancer 2 | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="dancer__session__redis___writing_a_session_engine_for_dancer_2"></a>Dancer::Session::Redis - Writing a session engine for Dancer 2</h1>
+
+<p>In order to continue presenting all the good things about Dancer 2, I wanted a
+good reason to show how the session handling is done. On the other hand, I
+didn't want to explain how the code is designed without something concrete to
+explain. So I came with the idea of writing a new session engine for Dancer 2,
+explaining all the steps here.</p>
+<p>Moreover, after having searched a bit, it appears that there is no Redis backend
+for storing sessions so that's a perfect opportunity to write it! Let's go!</p>
+<h2><a name="a_word_about_redis"></a>A word about Redis</h2>
+
+<p>I suppose you already know Redis, if you don't, well, you should! It's a blazing
+fast NoSQL key/value store. It can reach amazing performances like a rate of
+100,000 requests per second. Using it as a session storage to make sure multiple
+interface servers can share the same information is very common.</p>
+<p>Anything stored in Redis is serialized as a JSON string.</p>
+<h2><a name="session_engines_in_dancer_2"></a>Session engines in Dancer 2</h2>
+
+<p>We've already seen that Dancer 2 is entirely written with <a href="https://metacpan.org/module/Moo">Moo</a>. So you won't
+be surprised if I tell you that in Dancer 2, the engines are actually roles. So
+if we want to write a session backend for Dancer 2, we need to consume the
+<code>Dancer::Core::Role::SessionFactory</code> role. Why not <code>Session</code> instead of
+<code>SessionFactory</code> you ask? Well, it's the major design change (which I'm very
+happy with) if you compare to how things are done in Dancer 1.</p>
+<p>In Dancer 1, we have one object, a Dancer::Session::Something. That object will
+contain the session itself (expiration time, ID, content) and the session
+storage itself (for instance for YAML, you'll find here a <code>session_dir</code>
+attribute).</p>
+<p>It's probably not shocking at first sight, I presume because Dancer 1 still
+works like that and I never heard someone complaning about it, after almost 3
+years.</p>
+<p>But recently, I was facing an issue with sessions in Dancer 2 and I started
+thinking about how things are done, and I realized the design could be better by
+far. Indeed, it came to my mind that we have actually two very different things
+here: the session itself, and its storage backend.</p>
+<p>There are two concepts: a <code>Session</code> class, that contains generic information
+like an expiration time, a content, and ID and that is agnostic of
+how it is stored; and a SessionFactory class, which describes how to create,
+update and delete a <code>Session</code> object.</p>
+<p>So in Dancer 2, a session backend consumes the role
+<code>Dancer::Core::Role::SessionFactory</code>.</p>
+<p>Let's do that!</p>
+<h2><a name="dancer__session__redis"></a>Dancer::Session::Redis</h2>
+
+<p>First thing to do is to create the class for our session engine, we'll name it,
+abviously <code>Dancer::Session::Redis</code>:</p>
+<pre class="prettyprint">package Dancer::Session::Redis;
+use Moo;
+with 'Dancer::Core::Role::SessionFactory';</pre>
+
+<p>First, we want our backend to have a handle over a Redis connection. To do that,
+we'll create an attribute <code>redis</code> that will do all the boring bits for us,
+lazily.</p>
+<pre class="prettyprint">use JSON;
+use Redis;
+use Dancer::Core::Types; # brings helper for types
+
+has redis =&gt; (
+    is =&gt; 'rw',
+    isa =&gt; InstanceOf['Redis'],
+    lazy =&gt; 1,
+    builder =&gt; '_build_redis',
+);</pre>
+
+<p>The lazy attribute is very interesting, it says to Moo that this attribute will
+be built (initialized) only when called the first time. It means that the
+connection to Redis won't be opened until necessary.</p>
+<pre class="prettyprint">sub _build_redis {
+    my ($self) = @_;
+    Redis-&gt;new(
+        server =&gt; $self-&gt;server,
+        password =&gt; $self-&gt;password,
+        encoding =&gt; undef,
+    );
+}</pre>
+
+<p>As you can see, we want to create two more attributes: <code>server</code> and
+<code>password</code>. Dancer 2 will pass anything defined in the config to the engine
+creation. So for instance, if we have:</p>
+<pre class="prettyprint"># config.yml
+...
+engines:
+  session:
+    Redis:
+      server: foo.mydomain.com
+      password: S3Cr3t</pre>
+
+<p>The server and password entries will be passed to the constructor of the Redis
+session engine, as expected. That's another sign of the proper design of Dancer
+2, no more settings shared among all the packages, the Redis engine only knows
+about itself, it has absolutely no idea of what a Dancer config is.</p>
+<pre class="prettyprint">has server =&gt; (is =&gt; 'ro', required =&gt; 1);
+has password =&gt; (is =&gt; 'ro');</pre>
+
+<p>The role requires that we implement <code>_retrieve</code>, <code>_flush</code>, <code>_destroy</code> and
+<code>_sessions</code>.</p>
+<p>The first one, <code>_retrieve</code> is supposed to return a session object for a session
+ID it's passed. In our case, it's pretty easy, our sessions are going to be
+stored in Redis, the session ID will be the key, the session the value. So
+retrieving is as easy as doing a get and decoding the JSON string returned:</p>
+<pre class="prettyprint">sub _retrieve {
+    my ($self, $session_id) = @_;
+    my $json = $self-&gt;redis-&gt;get($session_id);
+    my $hash = from_json( $json );
+    return bless $hash, 'Dancer::Core::Session';
+}</pre>
+
+<p>Now we should implement the <code>_flush</code> method, which is called by Dancer when the
+session needs to be stored in the backend. That's actually a write to Redis. The
+method receives a <code>Dancer::Core::Session</code> object and is supposed to store it.</p>
+<pre class="prettyprint">sub _flush {
+    my ($self, $session) = @_;
+    my $json = to_json( { %{ $session } } );
+    $self-&gt;redis-&gt;set($session-&gt;id, $json);
+}</pre>
+
+<p>Now, the <code>_destroy</code> method that is supposed to remove a session from the
+backend, the session ID is passed.</p>
+<p>Easy one, we should delete the key from Redis.</p>
+<pre class="prettyprint">sub _destroy {
+    my ($self, $session_id) = @_;
+    $self-&gt;redis-&gt;del($session_id);
+}</pre>
+
+<p>And finally, the last one, the <code>_sessions</code> method which is supposed to list all
+the session IDs currently stored in the backend. It's in our case as stupid as
+listing all the keys that Redis has.</p>
+<pre class="prettyprint">sub _sessions {
+    my ($self) = @_;
+    my @keys = $self-&gt;redis-&gt;keys('*');
+    return \@keys;
+}</pre>
+
+<p>Voil&#xe0;. The session engine is ready. Let's play with it now.</p>
+<h2><a name="behind_the__code_session__code__keyword"></a>Behind the <code>session</code> keyword</h2>
+
+<p>It should be clear now that a session storage system is not the same thing as a
+session itself. Let's look at how things work when you use the <code>session</code>
+keyword in Dancer.</p>
+<p>First of all, keep in mind that when Dancer 2 executes a route handler to
+process a request, it creates a <code>Dancer::Core::Context</code> object. That object is
+designed to handle all the volatile information of the current request: the
+environment, the request object, the newborn response object, the cookies...</p>
+<p>This context is passed to all the components of Dancer that can play with it, to
+build the response. For instance, a before filter will receive that context
+object.</p>
+<p>That where we'll find the session handle for the current client, in the context.
+The beauty of it is that it's actually a lazy attribute, and its builder has
+one thing to do: look if the client has a <code>dancer.session</code> cookie, and if so,
+try to <code>retrieve</code> the session from the storage engine, with the value of the
+cookie (the session ID).</p>
+<pre class="prettyprint">has session =&gt; (
+    is      =&gt; 'rw',
+    isa     =&gt; Session,
+    lazy    =&gt; 1,
+    builder =&gt; '_build_session',
+);
+
+sub _build_session {
+    my ($self) = @_;
+    my $session;
+
+    # Find the session engine
+    my $engine = $self-&gt;app-&gt;setting('session');
+    croak "No session engine defined, cannot use session."
+      if ! defined $engine;
+
+    # find the session cookie if any
+    my $session_id;
+    my $session_cookie = $self-&gt;cookie('dancer.session');
+    if (defined $session_cookie) {
+        $session_id = $session_cookie-&gt;value;
+    }
+
+    # if we have a session cookie, try to retrieve the session
+    if (defined $session_id) {
+        eval { $session = $engine-&gt;retrieve(id =&gt; $session_id) };
+        croak "Fail to retreive session: $@"
+          if $@ &amp;&amp; $@ !~ /Unable to retrieve session/;
+    }
+
+    # create the session if none retrieved
+    return $session ||= $engine-&gt;create();
+}</pre>
+
+<p>So the very first time <code>session</code> is called, the object is either retrieved
+from the backend, or a new <code>Dancer::Core::Session</code> is created, and stored in
+the context.</p>
+<p>Then, a <code>before</code> filter makes sure a cookie <code>dancer.session</code> is added to the
+headers.</p>
+<pre class="prettyprint"># Hook to add the session cookie in the headers, if a session is defined
+$self-&gt;add_hook(Dancer::Core::Hook-&gt;new(
+    name =&gt; 'core.app.before_request',
+    code =&gt; sub {
+        my $context = shift;
+
+        # make sure an engine is defined, if not, nothing to do
+        my $engine = $self-&gt;setting('session');
+        return if ! defined $engine;
+
+        # push the session in the headers
+        $context-&gt;response-&gt;push_header('Set-Cookie',
+            $context-&gt;session-&gt;cookie-&gt;to_header);
+    }
+));</pre>
+
+<p>At this time, the user's code comes into play, using the <code>session</code> keyword,
+which is actually that simple:</p>
+<pre class="prettyprint">sub session {
+    my ($self, $key, $value) = @_;
+
+    my $session = $self-&gt;context-&gt;session;
+    croak "No session available, a session engine needs to be set"
+        if ! defined $session;
+
+    # return the session object if no key
+    return $session if @_ == 1;
+
+    # read if a key is provided
+    return $session-&gt;read($key) if @_ == 2;
+
+    # write to the session
+    $session-&gt;write($key =&gt; $value);
+}</pre>
+
+<p>And to conclude, an <code>after</code> filter is set to call the <code>flush</code> method of the
+storage backend. Indeed, the <code>write</code> calls you see above do not change the
+sesssion in the storage system, they only alter the object itself. That's a
+major improvement if you compare to Dancer 1, because as everything is mixed and
+less well decoupled, in Dancer 1, a write to the session is also a flush to the
+backend system.</p>
+<p>Here, we know that we flush exactly once per request, when the response is ready.</p>
+<pre class="prettyprint"># Hook to flush the session at the end of the request, this way, we're sure we
+# flush only once per request
+$self-&gt;add_hook(
+    Dancer::Core::Hook-&gt;new(
+        name =&gt; 'core.app.after_request',
+        code =&gt; sub {
+            # make sure an engine is defined, if not, nothing to do
+            my $engine = $self-&gt;setting('session');
+            return if ! defined $engine;
+            return if ! defined $self-&gt;context;
+            $engine-&gt;flush(session =&gt; $self-&gt;context-&gt;session);
+        },
+    )
+);</pre>
+
+<h2><a name="code_for_this_article"></a>Code for this article</h2>
+
+<p>The code of the session backend described here has been released on
+<a href="https://github.com/sukria/Dancer-Session-Redis/blob/master/lib/Dancer/Session/Redis.pm">GitHub</a>.</p>
+<p>It's not released on CPAN yet because we'll wait for Dancer 2 to be there first,
+for obvious reasons.</p>
+<h2><a name="author"></a>Author</h2>
+
+<p>This article has been written by <a href="http://twitter.com/sukria">Alexis Sukrieh</a>
+for the Perl Dancer Advent Calendar 2012.</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>

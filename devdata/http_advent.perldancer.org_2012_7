@@ -1,0 +1,345 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<title> A first app with Dancer 2 | PerlDancer Advent Calendar</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="alternate" type="application/rss+xml" title="All Articles " href="/feed/2012" /> 
+
+
+<!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">/* <![CDATA[ */
+    !window.jQuery && document.write('<script src="/javascripts/jquery.js"><\/script>')
+/* ]]> */</script>
+
+<!-- Prettyfy -->
+<link href="/css/prettify.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="/javascripts/prettify.js"></script>
+
+</head>
+<body onload="prettyPrint()">
+<div id="page">
+
+<div id="sidebar">
+<a href="/" class="homelink">Dancer Advent Calendar</a><br />
+
+<p>
+The PerlDancer Advent Calendar is a community-driven project that aims 
+to showcase the Dancer Perl web framework.
+</p>
+
+<p>
+Each day of December until Christmas, one article about Dancer. Stay tuned for new moves!
+</p>
+
+<ul id="sidebar-items">
+<li>
+    <h3>About Dancer</h3>
+    <ul class="links">
+        <li><a href="http://www.perldancer.org/">Dancer homepage</a></li>
+        <li><a href="http://twitter.com/PerlDancer">Official Twitter</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer">Dancer on GitHub</a></li>
+        <li><a href="http://github.com/PerlDancer/Dancer2">Dancer 2 on GitHub</a></li>
+        <li><a class="feed" href="/feed/2012">RSS</a></li>
+    </ul>
+</li>
+</ul>
+</div>
+
+
+<div id="content">
+<div class="pod-document"><h1><a name="a_first_app_with_dancer_2"></a>A first app with Dancer 2</h1>
+
+<p>In the previous article we've seen how concrete Dancer&nbsp;2 is, already. It's not
+something in the air, it's real and is powering the website you're reading right
+now.</p>
+<p>The ecosystem still needs to be fully ported but it doesn't prevent you from
+starting a webapp with Dancer&nbsp;2. Actually, that's the best way you could help
+Dancer&nbsp;2 moving forward!</p>
+<p>In this article we'll see how to build an application with Dancer2, from
+scratch. We'll try to show off here one of the most important benefit of the
+design change in Dancer's core: its application scoping.</p>
+<p>I'm going to be a little bit harsh towards  Dancer&nbsp;1 in this demonstration -
+but as we say in French: <i>Qui aime bien chatie bien</i>, which translates roughly
+to tough love, or being cruel to be kind.</p>
+<p>Anyway! The main idea behind this article is to show off how the design changes of
+Dancer&nbsp;2 will make your life easier, as an app developer. So we'll do something
+simple with Dancer&nbsp;2 and see how Dancer&nbsp;1 deals with it. That's&nbsp;-&nbsp;I think&nbsp;-&nbsp;a
+good way to understand <i>why</i> the rewrite was necessary.</p>
+<p>But first, we need an app!</p>
+<h2><a name="let_s_start_with_a_single_file_app"></a>Let's start with a single-file app</h2>
+
+<p>First, we need to create the structure for the application dir. Of course, we
+can keep it simple, the <i>micro-framework</i> way:</p>
+<pre class="prettyprint">$ cat &gt; app.pl
+#!/usr/bin/env perl
+use Dancer 2.0;
+
+get '/' =&gt; sub { 'hello 2!' };
+
+start;</pre>
+
+<p>It's a valid Dancer&nbsp;2 app, of course, but that's not very interesting, it's a
+hello world, and as Dancer&nbsp;2's DSL is fully compatible with Dancer&nbsp;1, there is
+nothing new here.</p>
+<p>Let's create a real appdir structure. We could use the <code>dancer</code> helper provided
+with Dancer&nbsp;1, but I'd like to show you how to do that by hand, there is clearly
+not much to do.</p>
+<h2><a name="a_more_structured_application"></a>A more structured application</h2>
+
+<p>First of all, the structure:</p>
+<pre class="prettyprint">mkdir -p lib bin views/layouts public t</pre>
+
+<p>Now, let's create a basic layout and a view.</p>
+<pre class="prettyprint">cat &gt; views/layouts/main.tt
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;DemoApp&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;DemoApp&gt;/h1&gt;
+  [% content %]
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+
+<p>If you know Dancer&nbsp;1, you should have spotted something already. Got it? Yes,
+the <a href="https://metacpan.org/module/Template">Template</a> tags! We're back to TT's default: <code>[%</code> and <code>%]</code>. That was one of
+the most wanted change since Dancer has been out. Dancer&nbsp;2 is a good opportunity
+to drop that cosmetic change.</p>
+<p>OK, we have a layout, let's create the first view.</p>
+<pre class="prettyprint">cat &gt; views/index.tt
+Hello Dancer 2</pre>
+
+<p>Now, the main app, to create the first route.</p>
+<pre class="prettyprint">cat &gt; lib/DemoApp.pm
+package DemoApp;
+use Dancer 2.0;
+
+get '/' =&gt; sub {
+    template 'index';
+};
+
+1;</pre>
+
+<p>And finally, the starter script.</p>
+<pre class="prettyprint">cat &gt; bin/app.pl
+#!/usr/bin/env perl
+
+use Dancer 2.0;
+use DemoApp;
+
+start;</pre>
+
+<p>Again, here, you cannot tell the difference with Dancer&nbsp;1. It's just the same.
+So that's not very interesting. Hmm, wait, if we want to see a bit of the guts
+of Dancer&nbsp;2, we already can.</p>
+<p>Let's start the application with the core debug flag:</p>
+<pre class="prettyprint">$ DANCER_DEBUG_CORE=1 perl -I../Dancer2/lib ./bin/app.pl
+core: binding import method to main
+core: binding app to main
+core: exporting DSL symbols for main
+core: binding import method to DemoApp
+core: binding app to DemoApp
+core: exporting DSL symbols for DemoApp
+core: [DemoApp] -&gt; get(/, CODE(0x2170aa0))
+core: [main] -&gt; start()
+HTTP::Server::Simple::PSGI: You can connect to your server at http://localhost:3000/</pre>
+
+<p>That's interesting because you can see here how everything is scoped properly.
+There are already two "apps" (<code>Dancer::Core::App</code> objects), one for main
+(<code>bin/app.pl</code>) and one for <code>DemoApp.pm</code>.</p>
+<p>Any call to a DSL keyword will be logged, with its arguments. Like you can see
+above for <code>get</code> and <code>start</code>. We also see from which app they are called.
+Imagine all the help it can provide when debugging your app.</p>
+<p>If I hit my app, I should see a call to template, as my <code>/</code> route uses it:</p>
+<pre class="prettyprint">$ curl http://0:3000/
+core: [DemoApp] -&gt; template(index)
+...</pre>
+
+<p>We clearly see that everything is scoped, let's try to demonstrate the benefits
+of that.</p>
+<h2><a name="scoped_applications"></a>Scoped applications</h2>
+
+<p>Let's say that I want my application to provide a set of routes which share a
+common set configuration. For instance, I want all the routes here to disable
+the layout and to have a prefix.</p>
+<p>Also I want all these routes to be available only under a specific environment.</p>
+<p>A simple and straight-forward example is to use a <i>debug</i> namespace: We want a
+set of route for our debugging purposes, so we're going to add
+<code>DemoApp::DebugRoutes</code>:</p>
+<pre class="prettyprint">mkdir -p lib/DemoApp
+cat &gt; lib/DemoApp/DebugRoutes.pm
+package DemoApp::DebugRoutes;
+
+use Dancer 2.0;
+
+# First we add a prefix
+prefix '/debug';
+
+# Make sure we don't have a layout set here
+set layout =&gt; undef;
+
+# Filter requestes for developnment env only
+hook 'before' =&gt; sub {
+    if (dancer_app-&gt;environment ne 'development') {
+        status 404;
+        return halt;
+    }
+};
+
+# a first route
+get '/env' =&gt; sub {
+    to_dumper(request-&gt;env);
+};
+
+1;</pre>
+
+<p>Now, use that new set of routes in the main app.</p>
+<pre class="prettyprint"># in lib/DemoApp.pm
+...
+use DemoApp::DebugRoutes;</pre>
+
+<p>Great, let's test that. We should see the first route as before, and of
+course we should see <code>DebugRoutes</code> in the debug output:</p>
+<pre class="prettyprint">$ DANCER_DEBUG_CORE=1 perl -I../Dancer2/lib ./bin/app.pl
+[...]
+core: [DemoApp::DebugRoutes] -&gt; prefix(/debug)
+core: [DemoApp::DebugRoutes] -&gt; set(layout, &lt;undef&gt;)
+core: [DemoApp::DebugRoutes] -&gt; hook(before, CODE(0x1f54cd8))
+core: [DemoApp::DebugRoutes] -&gt; get(/env, CODE(0x1f7b588))
+core: [DemoApp] -&gt; get(/, CODE(0x1f32320))
+core: [main] -&gt; start()
+HTTP::Server::Simple...</pre>
+
+<p>Looks great, let's test it. The first route should remain unchanged.</p>
+<pre class="prettyprint">$ curl -i http://0:3000/
+core: [DemoApp] -&gt; template(index)
+HTTP/1.0 200 OK
+Server: Perl Dancer
+Content-Length: 85
+Content-Type: text/html; charset=UTF-8
+
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;DemoApp&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+Hello Dancer 2
+
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+
+<p>OK, so far so good. Now, let's try the <code>/debug/env</code> route we added. It's under
+the prefix <code>/debug</code>, should not provide the layout and should only be available
+under development env (which is the case now):</p>
+<pre class="prettyprint">$ curl http://0:3000/debug/env
+core: [DemoApp::DebugRoutes] -&gt; dancer_app()
+core: [DemoApp::DebugRoutes] -&gt; request()
+core: [DemoApp::DebugRoutes] -&gt; to_dumper(HASH(0x2148ed0))
+HTTP/1.0 200 OK
+[...]
+$VAR1 = {
+      'psgi.multiprocess' =&gt; 0,
+      'SERVER_NAME' =&gt; '0.0.0.0',
+      'SCRIPT_NAME' =&gt; '',
+      'PATH_INFO' =&gt; '/debug/env',
+[...]</pre>
+
+<p>Looks to work!</p>
+<p>Now, let's restart the app under a different environment, the <code>before</code> hook
+should block the route while not doing it for the main app.</p>
+<pre class="prettyprint">$ DANCER_ENVIRONMENT=prod \
+DANCER_DEBUG_CORE=1 \
+perl -I../Dancer2/lib ./bin/app.pl &amp;
+[...]
+
+$ curl -i http://0:3000/debug/env
+core: [DemoApp::DebugRoutes] -&gt; dancer_app()
+core: [DemoApp::DebugRoutes] -&gt; status(404)
+core: [DemoApp::DebugRoutes] -&gt; halt()
+HTTP/1.0 404 Not Found
+Server: Perl Dancer
+Content-Length: 0
+Content-Type: text/html</pre>
+
+<p>And the main route still works (meaning the filter doesn't get into our way
+elsewhere):</p>
+<pre class="prettyprint">$ curl http://0:3000/ -I
+core: [DemoApp] -&gt; template(index)
+HTTP/1.0 200 OK</pre>
+
+<p>Yup. It works. But <i>it's the same with Dancer&nbsp;1</i> you say? Well let's see. I'm
+going to restart the app with Dancer&nbsp;1 and do the same tests.</p>
+<p>Any clue what will mess up?</p>
+<p>Well, no need to go very far, the <code>/</code> route has disappeared because the <code>prefix</code>
+statement is global (as everything you do in Dancer&nbsp;1). So if you load
+<code>DemoApp::DebugRoutes</code> <i>before</i> defining the <code>/</code> route, the <code>prefix</code> will
+propagate to all the remaining route to define...</p>
+<p>So with Dancer&nbsp;1, the <code>/</code> route became... <code>/debug</code> (a prefix <code>/debug</code> combined
+with a <code>/</code> route):</p>
+<pre class="prettyprint">$ curl -i http://0:3000/debug
+[...]
+X-Powered-By: Perl Dancer 1.311
+
+Hello Dancer 2</pre>
+
+<p>And of course the layout has disappeared as well, as it's disabled in the
+<code>DebugRoutes</code> package.</p>
+<p>As you can expect, the <code>/</code> is now a <code>404</code>:</p>
+<pre class="prettyprint">$ curl -I http://0:3000/
+[...]
+HTTP/1.0 404 Not Found</pre>
+
+<p>Broken!</p>
+<p>This kind of loading time sequencing is crucial in a Dancer&nbsp;1 application. In
+Dancer&nbsp;2, thanks to the proper scoping of the core, it's not a problem anymore.</p>
+<h2><a name="author"></a>Author</h2>
+
+<p>This article has been written by <a href="http://twitter.com/sukria">Alexis Sukrieh</a>
+for the Perl Dancer Advent Calendar 2012.</p>
+</div>
+
+ <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'danceradvent'; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+
+
+</div>
+
+
+
+<div id="footer">
+Powered by the  
+<a href="http://perldancer.org/" title="Perl Dancer - Perl web framework">
+Dancer Perl web framework</a>
+</div>
+</div>
+
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-25174467-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</body>
+</html>
